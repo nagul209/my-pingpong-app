@@ -577,24 +577,20 @@
             
             loadState();
             
-            let isNewConnection = false;
+            window._isNewConnectionPending = false;
             if (sharedId && sharedId !== state.profile.id) {
                 if (confirm("다른 기기의 데이터를 이 기기와 연결할까요? \n(기존 데이터와 통합됩니다)")) {
                     state.profile.id = sharedId;
-                    isNewConnection = true;
+                    window._isNewConnectionPending = true;
                     // URL에서 ID 제거 (재로딩 방지)
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
 
-            await syncWithFirebase();
+            // 비동기로 동기화 시작 (UI를 블로킹하지 않음)
+            syncWithFirebase();
             
-            // 새 기기 연결 시, 이 기기의 데이터가 포함된 병합 결과를 서버에도 업데이트
-            if (isNewConnection) {
-                saveState(true);
-            }
-            
-            updateProfileUI(); // Sync 후 UI 한 번 더 갱신
+            updateProfileUI(); 
             initTagButtons('p-tag-container', 'p-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('match-tag-container', 'match-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('my-tag-container', 'my-tags-value', MY_STRATEGY_TAGS, 'purple');
@@ -662,35 +658,40 @@
             });
         }
 
-        let isFirebaseListening = false;
-
-        async function syncWithFirebase() {
+        function syncWithFirebase() {
             if(!db) return;
             const syncStatus = document.getElementById('sync-status');
             syncStatus.innerText = "Syncing with Cloud...";
             
             try {
-                // 최초 1회 로드
-                const snapshot = await db.ref('users_v2/' + state.profile.id).once('value');
-                processRemoteState(snapshot.val());
-                syncStatus.innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
-
-                // 실시간 동기화 리스너 등록 (이미 등록되어있지 않다면)
-                if (!isFirebaseListening) {
-                    db.ref('users_v2/' + state.profile.id).on('value', (snap) => {
-                        processRemoteState(snap.val());
-                        syncStatus.innerText = "Live Synced: " + new Date().toLocaleTimeString();
-                    });
-                    isFirebaseListening = true;
+                // 기존 리스너가 있다면 제거
+                if (window._firebaseRef) {
+                    window._firebaseRef.off();
                 }
+                
+                window._firebaseRef = db.ref('users_v2/' + state.profile.id);
+                // 실시간 동기화 리스너 등록 (최초 1회 로드 포함)
+                window._firebaseRef.on('value', (snap) => {
+                    processRemoteState(snap.val());
+                    syncStatus.innerText = "Live Synced: " + new Date().toLocaleTimeString();
+                    
+                    // 새 기기 연결 작업 중이라면, 병합 완료 후 즉시 서버로 업로드
+                    if (window._isNewConnectionPending) {
+                        saveState(true);
+                        window._isNewConnectionPending = false;
+                    }
+                }, (err) => {
+                    console.error("Sync error", err);
+                    syncStatus.innerText = "Sync Failed (Offline)";
+                });
             } catch(e) {
-                console.error("Sync failed", e);
+                console.error("Sync setup failed", e);
                 syncStatus.innerText = "Sync Failed (Offline)";
             }
         }
 
         function processRemoteState(remoteState) {
-            if (!remoteState) return;
+            if (!remoteState) remoteState = { matches: [], partners: [] };
 
             // 매치 데이터 병합
             const localMatches = state.matches || [];
@@ -1283,15 +1284,9 @@
             if (newId === state.profile.id) return alert("이미 이 키로 동기화되어 있습니다.");
             
             if (confirm("입력하신 키로 데이터 동기화를 시작할까요? \n현재 데이터와 서버 데이터가 병합됩니다.")) {
-                // 기존 리스너 해제
-                if (isFirebaseListening && db) {
-                    db.ref('users_v2/' + state.profile.id).off('value');
-                    isFirebaseListening = false;
-                }
-
                 state.profile.id = newId;
-                await syncWithFirebase();
-                saveState(true); // 병합된 데이터를 서버에 업데이트하여 다른 기기에서도 볼 수 있게 함
+                window._isNewConnectionPending = true;
+                syncWithFirebase();
                 document.getElementById('display-sync-id').innerText = state.profile.id;
                 alert("연결 성공! 이제부터 모든 기기가 실시간으로 자동 동기화됩니다.");
                 document.getElementById('input-sync-id').value = '';
