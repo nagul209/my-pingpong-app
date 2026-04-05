@@ -438,6 +438,26 @@
                 </div>
                 <input type="text" id="set-style" placeholder="주력 스타일 (예: 드라이브 전형)" class="w-full bg-slate-50 p-4.5 rounded-2xl font-bold border border-slate-200">
                 <button onclick="saveProfile()" class="w-full py-5 premium-gradient rounded-3xl font-black text-lg btn-press">저장하기</button>
+                
+                <hr class="border-slate-100">
+
+                <!-- Sync Section -->
+                <div class="space-y-4 pt-2">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">🔗 클라우드 동기화 (기기 연결)</h3>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400">내 동기화 고유 키</span>
+                            <span id="display-sync-id" class="text-[10px] font-mono font-black text-indigo-600 truncate max-w-[150px]">Loading...</span>
+                        </div>
+                        <button onclick="copySyncLink()" class="w-full py-3 bg-white border border-indigo-100 text-indigo-600 rounded-xl font-bold text-[11px] hover:bg-indigo-50 transition-all btn-press">동기화 전용 주소 복사하기</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-sync-id" placeholder="다른 기기의 키 입력" class="flex-1 bg-slate-50 p-3.5 rounded-xl text-[11px] font-bold outline-none border border-slate-200">
+                        <button onclick="connectById()" class="px-5 py-3.5 premium-gradient text-white rounded-xl font-bold text-[11px] btn-press">연결</button>
+                    </div>
+                    <p class="text-[9px] text-slate-400 leading-relaxed text-center italic">한 번 연결되면 모든 기기가 실시간으로 자동 동기화됩니다.</p>
+                </div>
+
                 <div class="flex gap-2">
                     <button onclick="backupToFirebase()" class="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-bold text-xs uppercase">Server Backup</button>
                     <button onclick="closeSettings()" class="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-xs uppercase tracking-widest">Close</button>
@@ -546,8 +566,23 @@
         };
 
         window.onload = async () => {
+            // URL 파라미터 체크 (자동 동기화 연결용)
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedId = urlParams.get('id');
+            
             loadState();
+            
+            if (sharedId && sharedId !== state.profile.id) {
+                if (confirm("다른 기기의 데이터를 이 기기와 연결할까요? \n(기존 데이터와 통합됩니다)")) {
+                    state.profile.id = sharedId;
+                    saveState(false);
+                    // URL에서 ID 제거 (재로딩 방지)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+
             await syncWithFirebase();
+            updateProfileUI(); // Sync 후 UI 한 번 더 갱신
             initTagButtons('p-tag-container', 'p-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('match-tag-container', 'match-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('my-tag-container', 'my-tags-value', MY_STRATEGY_TAGS, 'purple');
@@ -1148,6 +1183,39 @@
             document.getElementById('set-name').value = state.profile.name;
             document.getElementById('set-handicap').value = state.profile.handicap;
             document.getElementById('set-style').value = state.profile.style;
+            document.getElementById('display-sync-id').innerText = state.profile.id;
+        }
+
+        async function copySyncLink() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const syncId = state.profile.id;
+            const fullUrl = `${baseUrl}?id=${syncId}`;
+            
+            try {
+                await navigator.clipboard.writeText(fullUrl);
+                alert("동기화 전용 주소가 클리보드에 복사되었습니다. \n이 주소를 카카오톡 등으로 나에게 보내 컴퓨터에서 열어보세요!");
+            } catch (err) {
+                prompt("주소를 수동으로 복사하세요:", fullUrl);
+            }
+        }
+
+        async function connectById() {
+            const newId = document.getElementById('input-sync-id').value.trim();
+            if (!newId) return alert("동기화 키를 입력해 주세요.");
+            if (newId === state.profile.id) return alert("이미 이 키로 동기화되어 있습니다.");
+            
+            if (confirm("입력하신 키로 데이터 동기화를 시작할까요? \n현재 데이터와 서버 데이터가 병합됩니다.")) {
+                state.profile.id = newId;
+                saveState(false);
+                await syncWithFirebase();
+                updateProfileUI();
+                renderDashboard();
+                renderHistory();
+                renderPartners();
+                document.getElementById('display-sync-id').innerText = state.profile.id;
+                alert("연결 성공! 이제부터 모든 기기가 실시간으로 동기화됩니다.");
+                document.getElementById('input-sync-id').value = '';
+            }
         }
 
         function closeSettings() {
