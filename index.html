@@ -577,16 +577,23 @@
             
             loadState();
             
+            let isNewConnection = false;
             if (sharedId && sharedId !== state.profile.id) {
                 if (confirm("다른 기기의 데이터를 이 기기와 연결할까요? \n(기존 데이터와 통합됩니다)")) {
                     state.profile.id = sharedId;
-                    saveState(false);
+                    isNewConnection = true;
                     // URL에서 ID 제거 (재로딩 방지)
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
 
             await syncWithFirebase();
+            
+            // 새 기기 연결 시, 이 기기의 데이터가 포함된 병합 결과를 서버에도 업데이트
+            if (isNewConnection) {
+                saveState(true);
+            }
+            
             updateProfileUI(); // Sync 후 UI 한 번 더 갱신
             initTagButtons('p-tag-container', 'p-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('match-tag-container', 'match-tags-value', STRATEGY_TAGS, 'indigo');
@@ -1259,8 +1266,8 @@
             
             if (confirm("입력하신 키로 데이터 동기화를 시작할까요? \n현재 데이터와 서버 데이터가 병합됩니다.")) {
                 state.profile.id = newId;
-                saveState(false);
                 await syncWithFirebase();
+                saveState(true); // 병합된 데이터를 서버에 업데이트하여 다른 기기에서도 볼 수 있게 함
                 updateProfileUI();
                 renderDashboard();
                 renderHistory();
