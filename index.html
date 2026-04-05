@@ -662,45 +662,63 @@
             });
         }
 
+        let isFirebaseListening = false;
+
         async function syncWithFirebase() {
             if(!db) return;
             const syncStatus = document.getElementById('sync-status');
             syncStatus.innerText = "Syncing with Cloud...";
             
             try {
+                // 최초 1회 로드
                 const snapshot = await db.ref('users_v2/' + state.profile.id).once('value');
-                const remoteState = snapshot.val();
-                
-                if (remoteState) {
-                    // 최근 데이터 유지 방식 병합 (ID가 Date.now() 기반이므로 이를 기준으로 비교 가능)
-                    // 여기서는 간단히 remote와 local 중 더 많은 매치를 가진 쪽을 우선하거나, 
-                    // 혹은 matches 배열을 ID 기준으로 중복 제거 및 병합 처리
-                    const localMatches = state.matches || [];
-                    const remoteMatches = remoteState.matches || [];
-                    const allMatches = [...localMatches, ...remoteMatches];
-                    
-                    // ID 기준으로 중복 제거 (최신 데이터 유지)
-                    const uniqueMatches = Array.from(new Map(allMatches.map(m => [m.id, m])).values());
-                    state.matches = uniqueMatches.sort((a, b) => a.id - b.id);
-                    
-                    // 파트너 ID 기준으로 정밀 병합
-                    const localPartners = state.partners || [];
-                    const remotePartners = remoteState.partners || [];
-                    const allPartners = [...localPartners, ...remotePartners];
-                    
-                    const uniquePartners = Array.from(new Map(allPartners.map(p => [p.id, p])).values());
-                    state.partners = uniquePartners;
-                    
-                    if (!state.profile.name || state.profile.name === "탁구 꿈나무") {
-                        state.profile = remoteState.profile;
-                    }
-                }
-                
-                saveState(false); // 로컬 저장 (서버 업로드는 제외하여 루프 방지)
+                processRemoteState(snapshot.val());
                 syncStatus.innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
+
+                // 실시간 동기화 리스너 등록 (이미 등록되어있지 않다면)
+                if (!isFirebaseListening) {
+                    db.ref('users_v2/' + state.profile.id).on('value', (snap) => {
+                        processRemoteState(snap.val());
+                        syncStatus.innerText = "Live Synced: " + new Date().toLocaleTimeString();
+                    });
+                    isFirebaseListening = true;
+                }
             } catch(e) {
                 console.error("Sync failed", e);
                 syncStatus.innerText = "Sync Failed (Offline)";
+            }
+        }
+
+        function processRemoteState(remoteState) {
+            if (!remoteState) return;
+
+            // 매치 데이터 병합
+            const localMatches = state.matches || [];
+            const remoteMatches = remoteState.matches || [];
+            const allMatches = [...localMatches, ...remoteMatches];
+            const uniqueMatches = Array.from(new Map(allMatches.map(m => [m.id, m])).values());
+            state.matches = uniqueMatches.sort((a, b) => a.id - b.id);
+            
+            // 파트너 데이터 병합
+            const localPartners = state.partners || [];
+            const remotePartners = remoteState.partners || [];
+            const allPartners = [...localPartners, ...remotePartners];
+            const uniquePartners = Array.from(new Map(allPartners.map(p => [p.id, p])).values());
+            state.partners = uniquePartners;
+            
+            if (!state.profile.name || state.profile.name === "탁구 꿈나무") {
+                state.profile = remoteState.profile;
+            }
+            
+            saveState(false); // 로컬 저장 (서버 업로드는 제외)
+            
+            // 화면 자동 갱신
+            updateProfileUI();
+            const activeNav = document.querySelector('.nav-active');
+            if (activeNav) {
+                if (activeNav.id === 'btn-dashboard') renderDashboard();
+                if (activeNav.id === 'btn-history') renderHistory();
+                if (activeNav.id === 'btn-partners') renderPartners();
             }
         }
 
@@ -1265,15 +1283,17 @@
             if (newId === state.profile.id) return alert("이미 이 키로 동기화되어 있습니다.");
             
             if (confirm("입력하신 키로 데이터 동기화를 시작할까요? \n현재 데이터와 서버 데이터가 병합됩니다.")) {
+                // 기존 리스너 해제
+                if (isFirebaseListening && db) {
+                    db.ref('users_v2/' + state.profile.id).off('value');
+                    isFirebaseListening = false;
+                }
+
                 state.profile.id = newId;
                 await syncWithFirebase();
                 saveState(true); // 병합된 데이터를 서버에 업데이트하여 다른 기기에서도 볼 수 있게 함
-                updateProfileUI();
-                renderDashboard();
-                renderHistory();
-                renderPartners();
                 document.getElementById('display-sync-id').innerText = state.profile.id;
-                alert("연결 성공! 이제부터 모든 기기가 실시간으로 동기화됩니다.");
+                alert("연결 성공! 이제부터 모든 기기가 실시간으로 자동 동기화됩니다.");
                 document.getElementById('input-sync-id').value = '';
             }
         }
