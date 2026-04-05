@@ -399,7 +399,12 @@
         <div id="view-partners" class="view-item hidden animate-fade-in space-y-6 pb-24">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-extrabold text-slate-800">상대방(파트너) 관리</h2>
-                <button onclick="openPartnerModal()" class="text-[10px] px-4 py-2.5 premium-gradient rounded-xl font-bold btn-press shadow-md">새 파트너 추가</button>
+                <div class="flex gap-2">
+                    <button onclick="exportPartners()" class="text-[9px] px-3 py-2 bg-slate-100 text-slate-500 rounded-lg font-bold btn-press">내보내기</button>
+                    <button onclick="document.getElementById('import-file').click()" class="text-[9px] px-3 py-2 bg-slate-100 text-slate-500 rounded-lg font-bold btn-press">가져오기</button>
+                    <input type="file" id="import-file" class="hidden" accept=".json" onchange="importPartners(event)">
+                    <button onclick="openPartnerModal()" class="text-[10px] px-4 py-2.5 premium-gradient rounded-xl font-bold btn-press shadow-md">새 파트너 추가</button>
+                </div>
             </div>
             <div id="partner-list" class="space-y-3">
                 <p class="text-xs text-slate-400 text-center py-20 italic">등록된 상대방 정보가 없습니다.</p>
@@ -671,9 +676,13 @@
                     const uniqueMatches = Array.from(new Map(allMatches.map(m => [m.id, m])).values());
                     state.matches = uniqueMatches.sort((a, b) => a.id - b.id);
                     
-                    if (state.partners.length < (remoteState.partners || []).length) {
-                        state.partners = remoteState.partners;
-                    }
+                    // 파트너 ID 기준으로 정밀 병합
+                    const localPartners = state.partners || [];
+                    const remotePartners = remoteState.partners || [];
+                    const allPartners = [...localPartners, ...remotePartners];
+                    
+                    const uniquePartners = Array.from(new Map(allPartners.map(p => [p.id, p])).values());
+                    state.partners = uniquePartners;
                     
                     if (!state.profile.name || state.profile.name === "탁구 꿈나무") {
                         state.profile = remoteState.profile;
@@ -812,7 +821,7 @@
         function renderPartners() {
             const list = document.getElementById('partner-list');
             list.innerHTML = '';
-            if(state.partners.length === 0) {
+            if(!state.partners || state.partners.length === 0) {
                 list.innerHTML = '<p class="text-xs text-slate-400 text-center py-20 italic">등록된 상대방이 없습니다.</p>';
                 return;
             }
@@ -840,6 +849,50 @@
                     </div>
                 `;
             });
+        }
+
+        // --- BACKUP UTILS ---
+        function exportPartners() {
+            if (!state.partners || state.partners.length === 0) return alert("내보낼 데이터가 없습니다.");
+            
+            const dataStr = JSON.stringify(state.partners, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pingpong_partners_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importPartners(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) throw new Error("Invalid format");
+
+                    if (confirm(`${imported.length}명의 파트너 정보를 가져올까요? \n기존 정보와 병합됩니다.`)) {
+                        const local = state.partners || [];
+                        const all = [...local, ...imported];
+                        // ID 기준으로 중복 제거 및 최신 데이터 유지
+                        const unique = Array.from(new Map(all.map(p => [p.id, p])).values());
+                        state.partners = unique;
+                        saveState();
+                        renderPartners();
+                        alert("데이터를 성공적으로 가져왔습니다!");
+                    }
+                } catch (err) {
+                    alert("파일 분석에 실패했습니다. 올바른 형식의 JSON 파일인지 확인하세요.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset file input
         }
 
         // --- MATCHES HANDLING ---
