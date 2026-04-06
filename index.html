@@ -722,10 +722,18 @@
                 mergedProfile = { ...state.profile, ...remoteState.profile };
             }
             
-            // 오프라인/로컬에만 존재하거나 최신인 데이터가 병합되었다면 서버로 업로드 트리거
-            const isMatchesDifferent = JSON.stringify(mergedMatches) !== JSON.stringify(remoteMatches);
-            const isPartnersDifferent = JSON.stringify(mergedPartners) !== JSON.stringify(remotePartners);
-            const isProfileDifferent = JSON.stringify(mergedProfile) !== JSON.stringify(remoteState.profile || {});
+            // 오프라인/로컬에만 존재하거나 최신인 데이터가 병합되었다면 서버로 업로드 트리거 (무한루프 방지를 위해 배열 길이 및 속성 단순 비교)
+            const isMatchesDifferent = mergedMatches.length !== remoteMatches.length;
+            const isPartnersDifferent = mergedPartners.length !== remotePartners.length;
+            
+            let isProfileDifferent = false;
+            if (remoteState.profile) {
+                isProfileDifferent = (mergedProfile.name !== remoteState.profile.name) || 
+                                     (mergedProfile.handicap !== remoteState.profile.handicap) || 
+                                     (mergedProfile.style !== remoteState.profile.style);
+            } else if (mergedProfile.name !== "탁구 꿈나무") {
+                isProfileDifferent = true;
+            }
 
             state.matches = mergedMatches;
             state.partners = mergedPartners;
