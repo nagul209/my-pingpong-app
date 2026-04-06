@@ -1336,14 +1336,30 @@
         }
 
         async function backupToFirebase() {
-            if(!db) { alert("백업 실패: 데이터베이스(Firebase)에 연결되지 않았습니다. 인터넷 연결을 확인해주세요."); return; }
-            if(!state.profile || !state.profile.id) { alert("고유 프로필 정보가 없습니다. 다시 시도해주세요."); return; }
+            if(!db) { alert("백업 실패: 데이터베이스(Firebase)에 초기화되지 않았습니다."); return; }
+            if(!state.profile || !state.profile.id) { alert("고유 프로필 정보가 없습니다."); return; }
+            
+            alert("서버 통신을 시작합니다...\n(네트워크나 보안 프로그램에 의해 차단되었다면 이 다음 완료창이 뜨지 않습니다.)");
+            const btn = event.currentTarget || event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Uploading...";
+            
             try { 
-                await db.ref('users_v2/' + state.profile.id).set(state); 
-                alert("서버 백업이 성공적으로 완료되었습니다!"); 
+                // 파이어베이스 무한 대기(프리징) 방지를 위해 5초 타임아웃 추가
+                const setPromise = db.ref('users_v2/' + state.profile.id).set(state);
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000));
+                
+                await Promise.race([setPromise, timeoutPromise]);
+                alert("✅ 서버 백업이 성공적으로 완료되었습니다!"); 
             } catch(e) { 
                 console.error("Backup Error:", e);
-                alert("백업에 실패했습니다. 권한이나 연결 상태를 확인해주세요."); 
+                if(e.message === 'TIMEOUT') {
+                    alert("❌ 백업 시간이 초과되었습니다.\n현재 컴퓨터의 방화벽(회사망/백신/광고차단기)이 데이터베이스 접속을 막고 있는 것 같습니다.");
+                } else {
+                    alert("❌ 백업에 실패했습니다. 권한이나 연결 상태를 확인해주세요."); 
+                }
+            } finally {
+                btn.innerText = originalText;
             }
         }
 
