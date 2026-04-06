@@ -693,25 +693,47 @@
         function processRemoteState(remoteState) {
             if (!remoteState) remoteState = { matches: [], partners: [] };
 
+            const ensureArray = (val) => {
+                if (!val) return [];
+                if (Array.isArray(val)) return val;
+                return Object.values(val);
+            };
+
+            const remoteMatches = ensureArray(remoteState.matches);
+            const remotePartners = ensureArray(remoteState.partners);
+
             // 매치 데이터 병합
             const localMatches = state.matches || [];
-            const remoteMatches = remoteState.matches || [];
             const allMatches = [...localMatches, ...remoteMatches];
             const uniqueMatches = Array.from(new Map(allMatches.map(m => [m.id, m])).values());
-            state.matches = uniqueMatches.sort((a, b) => a.id - b.id);
+            const mergedMatches = uniqueMatches.sort((a, b) => a.id - b.id);
             
             // 파트너 데이터 병합
             const localPartners = state.partners || [];
-            const remotePartners = remoteState.partners || [];
             const allPartners = [...localPartners, ...remotePartners];
             const uniquePartners = Array.from(new Map(allPartners.map(p => [p.id, p])).values());
-            state.partners = uniquePartners;
+            const mergedPartners = uniquePartners;
             
-            if (!state.profile.name || state.profile.name === "탁구 꿈나무") {
-                state.profile = remoteState.profile;
+            // 프로필 동기화
+            let mergedProfile = state.profile;
+            if (remoteState.profile && remoteState.profile.name !== "탁구 꿈나무") {
+                mergedProfile = { ...state.profile, ...remoteState.profile };
+            } else if (state.profile.name === "탁구 꿈나무" && remoteState.profile) {
+                mergedProfile = { ...state.profile, ...remoteState.profile };
             }
             
-            saveState(false); // 로컬 저장 (서버 업로드는 제외)
+            // 오프라인/로컬에만 존재하거나 최신인 데이터가 병합되었다면 서버로 업로드 트리거
+            const isMatchesDifferent = JSON.stringify(mergedMatches) !== JSON.stringify(remoteMatches);
+            const isPartnersDifferent = JSON.stringify(mergedPartners) !== JSON.stringify(remotePartners);
+            const isProfileDifferent = JSON.stringify(mergedProfile) !== JSON.stringify(remoteState.profile || {});
+
+            state.matches = mergedMatches;
+            state.partners = mergedPartners;
+            state.profile = mergedProfile;
+            
+            const shouldUpload = isMatchesDifferent || isPartnersDifferent || isProfileDifferent;
+            
+            saveState(shouldUpload); // 로컬 저장 (변경점이 있으면 서버로 업로드)
             
             // 화면 자동 갱신
             updateProfileUI();
