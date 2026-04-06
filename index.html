@@ -715,11 +715,11 @@
             const mergedPartners = uniquePartners;
             
             // 프로필 동기화
-            let mergedProfile = state.profile;
+            let mergedProfile = state.profile || { name: "탁구 꿈나무", handicap: "5", style: "드라이브 전형" };
             if (remoteState.profile && remoteState.profile.name !== "탁구 꿈나무") {
-                mergedProfile = { ...state.profile, ...remoteState.profile };
-            } else if (state.profile.name === "탁구 꿈나무" && remoteState.profile) {
-                mergedProfile = { ...state.profile, ...remoteState.profile };
+                mergedProfile = { ...mergedProfile, ...remoteState.profile };
+            } else if (mergedProfile.name === "탁구 꿈나무" && remoteState.profile) {
+                mergedProfile = { ...mergedProfile, ...remoteState.profile };
             }
             
             // 오프라인/로컬에만 존재하거나 최신인 데이터가 병합되었다면 서버로 업로드 트리거 (무한루프 방지를 위해 배열 길이 및 속성 단순 비교)
@@ -1336,8 +1336,15 @@
         }
 
         async function backupToFirebase() {
-            if(!db) return;
-            try { await db.ref('users_v2/' + state.profile.id).set(state); alert("Backup Success!"); } catch(e) { alert("Backup Fail."); }
+            if(!db) { alert("백업 실패: 데이터베이스(Firebase)에 연결되지 않았습니다. 인터넷 연결을 확인해주세요."); return; }
+            if(!state.profile || !state.profile.id) { alert("고유 프로필 정보가 없습니다. 다시 시도해주세요."); return; }
+            try { 
+                await db.ref('users_v2/' + state.profile.id).set(state); 
+                alert("서버 백업이 성공적으로 완료되었습니다!"); 
+            } catch(e) { 
+                console.error("Backup Error:", e);
+                alert("백업에 실패했습니다. 권한이나 연결 상태를 확인해주세요."); 
+            }
         }
 
         // --- AI ---
