@@ -7,6 +7,7 @@
     <!-- Tailwind CSS & Essential Scripts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -115,6 +116,49 @@
     </style>
 </head>
 <body class="max-w-md mx-auto relative pb-24 overflow-x-hidden">
+
+    <!-- 구글 로그인 화면 (비로그인 시 전체 화면) -->
+    <div id="login-screen" class="hidden fixed inset-0 z-[500] flex flex-col items-center justify-center p-8" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+        <div class="w-full max-w-sm text-center space-y-8">
+            <!-- 로고/타이틀 -->
+            <div class="space-y-3">
+                <div class="w-20 h-20 rounded-3xl mx-auto flex items-center justify-center text-5xl shadow-2xl" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    🏓
+                </div>
+                <h1 class="text-3xl font-black text-slate-800 tracking-tighter">My Dashboard<span style="color:#4f46e5">.</span></h1>
+                <p class="text-sm font-bold text-slate-400">나의 탁구 기록을 스마트하게 관리하세요</p>
+            </div>
+
+            <!-- 특징 카드 -->
+            <div class="space-y-3 text-left">
+                <div class="flex items-center gap-3 bg-white/80 backdrop-blur p-4 rounded-2xl border border-white shadow-sm">
+                    <span class="text-2xl">☁️</span>
+                    <div><p class="text-sm font-black text-slate-700">실시간 클라우드 동기화</p><p class="text-[10px] text-slate-400 font-medium">PC와 스마트폰이 자동으로 연결됩니다</p></div>
+                </div>
+                <div class="flex items-center gap-3 bg-white/80 backdrop-blur p-4 rounded-2xl border border-white shadow-sm">
+                    <span class="text-2xl">📊</span>
+                    <div><p class="text-sm font-black text-slate-700">AI 기반 전술 분석</p><p class="text-[10px] text-slate-400 font-medium">경기 데이터로 승률을 높이세요</p></div>
+                </div>
+                <div class="flex items-center gap-3 bg-white/80 backdrop-blur p-4 rounded-2xl border border-white shadow-sm">
+                    <span class="text-2xl">🏅</span>
+                    <div><p class="text-sm font-black text-slate-700">상대방 분석 & 관리</p><p class="text-[10px] text-slate-400 font-medium">상대별 전형·서브·전술을 기록하세요</p></div>
+                </div>
+            </div>
+
+            <!-- 구글 로그인 버튼 -->
+            <div class="space-y-3">
+                <button id="btn-google-login" onclick="signInWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl py-4 px-6 font-black text-slate-700 text-sm shadow-lg hover:shadow-xl hover:bg-slate-50 transition-all active:scale-95">
+                    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                    Google 계정으로 시작하기
+                </button>
+                <p id="login-error-msg" class="hidden text-xs text-rose-500 font-bold text-center">로그인 중 오류가 발생했습니다. 다시 시도해 주세요.</p>
+                <div id="login-loading" class="hidden flex items-center justify-center gap-2 py-2">
+                    <div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-xs font-bold text-slate-400">로그인 중...</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Header -->
     <header class="p-6 flex justify-between items-center bg-white/20 backdrop-blur-sm sticky top-0 z-50" id="main-header">
@@ -458,20 +502,20 @@
                 
                 <hr class="border-slate-100">
 
-                <!-- Sync Key Section -->
-                <div class="space-y-4 pt-2">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">🔑 클라우드 동기화 설정</h3>
-                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-3">
-                        <p class="text-[10px] font-black text-indigo-500">Sync Key (동기화 키)</p>
-                        <div class="flex gap-2">
-                            <input type="text" id="set-sync-key" placeholder="예: sunny_pingpong" class="flex-1 bg-white p-3.5 rounded-xl text-sm font-bold outline-none border border-indigo-200 focus:border-indigo-400 transition-all">
-                            <button onclick="applySyncKey()" class="px-5 py-3.5 premium-gradient text-white rounded-xl font-bold text-[11px] btn-press shadow-md">적용</button>
+                <!-- Auth 사용자 정보 & 로그아웃 -->
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">🔐 계정 연동</h3>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <img id="auth-user-photo" src="" class="w-10 h-10 rounded-full border-2 border-indigo-100 hidden" alt="profile">
+                            <div class="flex-1 min-w-0">
+                                <p id="auth-user-name" class="text-sm font-black text-slate-700 truncate">로딩 중...</p>
+                                <p id="auth-user-email" class="text-[10px] font-bold text-slate-400 truncate"></p>
+                            </div>
                         </div>
-                        <p class="text-[9px] text-indigo-400 leading-relaxed">📱 모든 기기에서 동일한 키를 입력하면 실시간 자동 동기화됩니다.<br>영문, 숫자, 밑줄(_)만 사용 권장 (예: my_pingpong_2024)</p>
-                    </div>
-                    <div id="current-sync-status-box" class="hidden bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                        <p class="text-[9px] font-black text-emerald-500">✓ 현재 연결된 Sync Key</p>
-                        <p id="display-sync-key" class="text-sm font-mono font-black text-emerald-700 mt-1"></p>
+                        <button onclick="signOut()" class="w-full py-3 bg-white border border-rose-100 text-rose-400 rounded-xl font-bold text-[11px] hover:bg-rose-50 transition-all btn-press">
+                            🚪 로그아웃
+                        </button>
                     </div>
                 </div>
 
@@ -545,7 +589,6 @@
 
     <script>
         // --- API & State ---
-        // TODO: 향후 환경변수(.env)로 분리 권장
         const GEMINI_API_KEY = "AIzaSyDkOLdrwovhEoXAUnqmAlQ6AFNnANWhdtw";
         const firebaseConfig = {
             apiKey: "AIzaSyDjzeueCblNOUmNdETDEOhRAkhQC3Tflw8",
@@ -557,10 +600,11 @@
             appId: "1:512202176301:web:70abc887e90d130f87c5a4"
         };
 
-        let db;
+        let db, auth;
         try {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
+            db   = firebase.database();
+            auth = firebase.auth();
         } catch(e) { console.warn("Firebase inactive."); }
 
         let state = {
@@ -568,9 +612,9 @@
             matches: [],
             partners: []
         };
-        
-        // 현재 활성화된 Sync Key (localStorage에서 로드)
-        let currentSyncKey = null;
+
+        // 현재 인증된 사용자 UID
+        let currentUID = null;
 
         const STRATEGY_TAGS = {
             '서브 및 리시브': ['#서브변화많음', '#빠른롱서브주의', '#훅서브까다로움', '#YG서브주의', '#서브단조로움', '#너클서브위주', '#리시브불안', '#회전서브취약', '#짧은서브에약함', '#길게찍어주는리시브'],
@@ -585,28 +629,82 @@
             '멘탈 및 운영': ['#끝까지집중력유지', '#전술변화성공', '#접전상황침착함', '#과감한플레이', '#리드시방심', '#초반긴장함', '#멘탈흔들림', '#후반체력저하', '#자멸형범실']
         };
 
-        window.onload = async () => {
-            // 1) 로컬 스토리지에서 상태 로드
-            loadState();
-            
-            // 2) 저장된 Sync Key 확인 후 Firebase 자동 연결
-            const savedKey = localStorage.getItem('pingpong_sync_key');
-            if (savedKey) {
-                currentSyncKey = savedKey;
-                subscribeFirebase(savedKey); // onValue 실시간 리스너 등록
-            } else {
-                setSyncStatus('local'); // Sync Key 없음 → 로컬 전용
+        // --- Auth 상태 조점 ---
+        window.onload = () => {
+            document.getElementById('main-header').style.opacity = '0';
+            document.querySelector('main').style.opacity = '0';
+            document.querySelector('nav').style.opacity = '0';
+
+            if (!auth) {
+                _initApp(null);
+                return;
             }
 
-            updateProfileUI(); 
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('main-header').style.opacity = '1';
+                    document.querySelector('main').style.opacity = '1';
+                    document.querySelector('nav').style.opacity = '1';
+                    _initApp(user);
+                } else {
+                    document.getElementById('login-screen').classList.remove('hidden');
+                    document.getElementById('main-header').style.opacity = '0';
+                    document.querySelector('main').style.opacity = '0';
+                    document.querySelector('nav').style.opacity = '0';
+                }
+            });
+        };
+
+        function _initApp(user) {
+            currentUID = user ? user.uid : null;
+            loadState();
+            if (currentUID && db) {
+                subscribeFirebase(currentUID);
+            } else {
+                setSyncStatus('local');
+                _renderAll();
+            }
             initTagButtons('p-tag-container', 'p-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('match-tag-container', 'match-tags-value', STRATEGY_TAGS, 'indigo');
             initTagButtons('my-tag-container', 'my-tags-value', MY_STRATEGY_TAGS, 'purple');
+            document.getElementById('match-date').valueAsDate = new Date();
+        }
+
+        function _renderAll() {
+            updateProfileUI();
             renderDashboard();
             renderHistory();
             renderPartners();
-            document.getElementById('match-date').valueAsDate = new Date();
-        };
+        }
+
+        async function signInWithGoogle() {
+            const btn       = document.getElementById('btn-google-login');
+            const loadingEl = document.getElementById('login-loading');
+            const errorEl   = document.getElementById('login-error-msg');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            loadingEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
+            } catch (e) {
+                console.error('Google login error:', e);
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+                loadingEl.classList.add('hidden');
+            }
+        }
+
+        async function signOut() {
+            if (!confirm('로그아웃 하시겠습니까?')) return;
+            if (window._firebaseRef) { window._firebaseRef.off(); window._firebaseRef = null; }
+            currentUID = null;
+            closeSettings();
+            try { await auth.signOut(); } catch(e) { console.error(e); }
+        }
 
         function initTagButtons(containerId, valueId, tagsData, theme = 'indigo') {
             const container = document.getElementById(containerId);
@@ -678,41 +776,14 @@
             el.innerText = map[status] || status;
         }
 
-        // --- Sync Key 적용 ---
-        function applySyncKey() {
-            const key = document.getElementById('set-sync-key').value.trim();
-            if (!key) return alert('Sync Key를 입력하세요.');
-            // 한글, 영문, 숫자, 밑줄 허용
-            if (!/^[\w가-힣]+$/.test(key)) return alert('영문, 숫자, 밑줄(_), 한글만 사용 가능합니다.');
-            
-            if (currentSyncKey === key) {
-                alert(`이미 "${key}" 키로 동기화 중입니다.`);
-                return;
-            }
-
-            // 기존 리스너 해제
-            if (window._firebaseRef) window._firebaseRef.off();
-            
-            localStorage.setItem('pingpong_sync_key', key);
-            currentSyncKey = key;
-            
-            // 현재 로컬 데이터를 즉시 서버에 올린 후 리스너 등록
-            subscribeFirebase(key);
-            alert(`✅ Sync Key "${key}"가 적용되었습니다!\n모든 기기에서 같은 키를 사용하면 실시간으로 동기화됩니다.`);
-
-            // UI 업데이트
-            document.getElementById('display-sync-key').innerText = key;
-            document.getElementById('current-sync-status-box').classList.remove('hidden');
-        }
-
-        // --- Firebase 실시간 리스너 등록 ---
-        function subscribeFirebase(key) {
+        // --- Firebase 실시간 리스너 등록 (UID 기반) ---
+        function subscribeFirebase(uid) {
             if (!db) { setSyncStatus('offline'); return; }
             setSyncStatus('syncing');
 
             // 기존 리스너 해제
             if (window._firebaseRef) window._firebaseRef.off();
-            window._firebaseRef = db.ref('users_v2/' + key);
+            window._firebaseRef = db.ref('users_v2/' + uid);
 
             window._firebaseRef.on('value', (snap) => {
                 const remoteData = snap.val();
@@ -721,11 +792,13 @@
                 } else {
                     // Firebase에 데이터 없음 → 로컬 데이터를 서버에 최초 업로드
                     _uploadToFirebase();
+                    _renderAll();
                 }
                 setSyncStatus('synced');
             }, (err) => {
                 console.error('Firebase sync error:', err);
                 setSyncStatus('offline');
+                _renderAll(); // 오프라인이어도 로컬 데이터로 화면 표시
             });
         }
 
@@ -776,9 +849,9 @@
 
         // Firebase에 현재 state 업로드 (내부 전용)
         async function _uploadToFirebase() {
-            if (!db || !currentSyncKey) return;
+            if (!db || !currentUID) return;
             try {
-                await db.ref('users_v2/' + currentSyncKey).set(state);
+                await db.ref('users_v2/' + currentUID).set(state);
             } catch(e) {
                 console.warn('Firebase upload failed:', e);
             }
@@ -799,14 +872,14 @@
         }
 
         async function saveState() {
-            // 1) 로컬 스토리지 저장
+            // 1) 로컬 스토리지 저장 (오프라인 대비 취야)
             localStorage.setItem('myPingPongState', JSON.stringify(state));
             
-            // 2) Sync Key가 있으면 Firebase에도 자동 저장
-            if (db && currentSyncKey) {
+            // 2) UID가 있으면 Firebase에도 자동 저장
+            if (db && currentUID) {
                 setSyncStatus('syncing');
                 try {
-                    await db.ref('users_v2/' + currentSyncKey).set(state);
+                    await db.ref('users_v2/' + currentUID).set(state);
                     setSyncStatus('synced');
                 } catch(e) {
                     console.warn('Firebase auto-save failed:', e);
@@ -1323,13 +1396,21 @@
             document.getElementById('set-name').value = state.profile.name;
             document.getElementById('set-handicap').value = state.profile.handicap;
             document.getElementById('set-style').value = state.profile.style;
-            // Sync Key 필드 현재 값 표시
-            document.getElementById('set-sync-key').value = currentSyncKey || '';
-            if (currentSyncKey) {
-                document.getElementById('display-sync-key').innerText = currentSyncKey;
-                document.getElementById('current-sync-status-box').classList.remove('hidden');
+            // Auth 사용자 정보 표시
+            const user = auth ? auth.currentUser : null;
+            if (user) {
+                document.getElementById('auth-user-name').innerText = user.displayName || user.email;
+                document.getElementById('auth-user-email').innerText = user.email;
+                const photoEl = document.getElementById('auth-user-photo');
+                if (user.photoURL) {
+                    photoEl.src = user.photoURL;
+                    photoEl.classList.remove('hidden');
+                } else {
+                    photoEl.classList.add('hidden');
+                }
             } else {
-                document.getElementById('current-sync-status-box').classList.add('hidden');
+                document.getElementById('auth-user-name').innerText = '명세 없음 (로컈 전용)';
+                document.getElementById('auth-user-email').innerText = '';
             }
         }
 
