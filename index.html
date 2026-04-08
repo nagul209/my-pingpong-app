@@ -361,7 +361,7 @@
 
                     <div>
                         <label>📉 세트 스코어 선택 (나 : 상대)</label>
-                        <select id="match-score-select" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl font-bold text-slate-700 outline-none appearance-none">
+                        <select id="match-score-select" onchange="handleScoreChange()" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl font-bold text-slate-700 outline-none appearance-none">
                             <option value="3:0">3 : 0 (완승)</option>
                             <option value="3:1">3 : 1</option>
                             <option value="3:2">3 : 2 (풀세트 승)</option>
@@ -416,6 +416,11 @@
                     <input type="file" id="import-file" class="hidden" accept=".json" onchange="importPartners(event)">
                     <button onclick="openPartnerModal()" class="text-[10px] px-4 py-2.5 premium-gradient rounded-xl font-bold btn-press shadow-md">새 파트너 추가</button>
                 </div>
+            </div>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar py-1" id="partner-sort-filter">
+                <button onclick="sortPartners('name')" id="p-sort-name" class="px-5 py-2.5 bg-slate-800 text-white rounded-full text-[10px] font-black whitespace-nowrap">이름순</button>
+                <button onclick="sortPartners('winRate')" id="p-sort-winRate" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-400 rounded-full text-[10px] font-black whitespace-nowrap">승률순</button>
+                <button onclick="sortPartners('recent')" id="p-sort-recent" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-400 rounded-full text-[10px] font-black whitespace-nowrap">최근 경기순</button>
             </div>
             <div id="partner-list" class="space-y-3">
                 <p class="text-xs text-slate-400 text-center py-20 italic">등록된 상대방 정보가 없습니다.</p>
@@ -618,10 +623,16 @@
             '멘탈 및 체력': ['#초반기세강함', '#리드시여유부림', '#접전시멘탈흔들림', '#포커페이스', '#후반체력저하', '#범실많음', '#슬로우스타터']
         };
 
-        const MY_STRATEGY_TAGS = {
-            '서브 및 리시브': ['#내서브잘통함', '#리시브안정적', '#선제공격성공', '#짧은볼처리우수', '#리시브범실많음', '#상대서브파악실패', '#서브단조로움', '#리시브가길게빠짐'],
-            '공격 및 수비': ['#3구공격적중', '#드라이브성공률높음', '#블로킹탄탄함', '#풋워크가벼움', '#연결력우수', '#조급한공격', '#찬스볼놓침', '#발이무거움', '#테이블에서떨어짐', '#백핸드밀림'],
-            '멘탈 및 운영': ['#끝까지집중력유지', '#전술변화성공', '#접전상황침착함', '#과감한플레이', '#리드시방심', '#초반긴장함', '#멘탈흔들림', '#후반체력저하', '#자멸형범실']
+        const MY_WIN_TAGS = {
+            '서브 및 리시브': ['#내서브잘통함', '#리시브안정적', '#선제공격성공', '#짧은볼처리우수'],
+            '공격 및 수비': ['#3구공격적중', '#드라이브성공률높음', '#블로킹탄탄함', '#풋워크가벼움', '#연결력우수'],
+            '멘탈 및 운영': ['#끝까지집중력유지', '#전술변화성공', '#접전상황침착함', '#과감한플레이']
+        };
+
+        const MY_LOSS_TAGS = {
+            '서브 및 리시브': ['#리시브범실많음', '#상대서브파악실패', '#서브단조로움', '#리시브가길게빠짐'],
+            '공격 및 수비': ['#조급한공격', '#찬스볼놓침', '#발이무거움', '#테이블에서떨어짐', '#백핸드밀림'],
+            '멘탈 및 운영': ['#리드시방심', '#초반긴장함', '#멘탈흔들림', '#후반체력저하', '#자멸형범실']
         };
 
         window.onload = async () => {
@@ -652,6 +663,7 @@
             renderHistory();
             renderPartners();
             document.getElementById('match-date').valueAsDate = new Date();
+            handleScoreChange(); // 초기 태그 로드 (기본 3:0 기준)
         };
 
         function initTagButtons(containerId, valueId, tagsData, theme = 'indigo') {
@@ -826,12 +838,13 @@
 
         async function saveState(upload = true) {
             localStorage.setItem('myPingPongState', JSON.stringify(state));
-            document.getElementById('sync-status').innerText = "Saved: " + new Date().toLocaleTimeString();
+            const syncStatus = document.getElementById('sync-status');
+            if (syncStatus) syncStatus.innerText = "Saved: " + new Date().toLocaleTimeString();
             
             if (upload && db) {
                 try {
                     await db.ref('users_v2/' + state.profile.id).set(state);
-                    document.getElementById('sync-status').innerText = "Cloud Updated: " + new Date().toLocaleTimeString();
+                    if (syncStatus) syncStatus.innerText = "Cloud Updated: " + new Date().toLocaleTimeString();
                 } catch(e) {
                     console.warn("Auto-backup failed");
                 }
@@ -928,6 +941,21 @@
             }
         }
 
+        let currentPartnerSort = 'name';
+        function sortPartners(type) {
+            currentPartnerSort = type;
+            document.querySelectorAll('#partner-sort-filter button').forEach(btn => {
+                btn.classList.replace('bg-slate-800', 'bg-white');
+                btn.classList.replace('text-white', 'text-slate-400');
+                btn.classList.add('border');
+            });
+            const activeBtn = document.getElementById(`p-sort-${type}`);
+            activeBtn.classList.replace('bg-white', 'bg-slate-800');
+            activeBtn.classList.replace('text-slate-400', 'text-white');
+            activeBtn.classList.remove('border');
+            renderPartners();
+        }
+
         function renderPartners() {
             const list = document.getElementById('partner-list');
             list.innerHTML = '';
@@ -935,7 +963,29 @@
                 list.innerHTML = '<p class="text-xs text-slate-400 text-center py-20 italic">등록된 상대방이 없습니다.</p>';
                 return;
             }
-            state.partners.forEach(p => {
+
+            let sorted = [...state.partners];
+            if (currentPartnerSort === 'name') {
+                sorted.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            } else if (currentPartnerSort === 'winRate') {
+                sorted.sort((a, b) => {
+                    const getRate = (p) => {
+                        const ms = state.matches.filter(m => m.opponentId === p.id);
+                        return ms.length > 0 ? (ms.filter(m => m.result === '승').length / ms.length) : -1;
+                    };
+                    return getRate(b) - getRate(a);
+                });
+            } else if (currentPartnerSort === 'recent') {
+                sorted.sort((a, b) => {
+                    const getRecent = (p) => {
+                        const ms = state.matches.filter(m => m.opponentId === p.id).sort((m1, m2) => m2.id - m1.id);
+                        return ms.length > 0 ? ms[0].id : 0;
+                    };
+                    return getRecent(b) - getRecent(a);
+                });
+            }
+
+            sorted.forEach(p => {
                 const winCount = state.matches.filter(m => m.opponentId === p.id && m.result === '승').length;
                 const totalCount = state.matches.filter(m => m.opponentId === p.id).length;
                 list.innerHTML += `
@@ -1058,7 +1108,17 @@
             }
         }
 
-        function saveMatch() {
+        function handleScoreChange() {
+            const scoreVal = document.getElementById('match-score-select').value;
+            const scoreParts = scoreVal.split(':');
+            const myS = parseInt(scoreParts[0]);
+            const opS = parseInt(scoreParts[1]);
+            const isWin = myS > opS;
+            
+            initTagButtons('my-tag-container', 'my-tags-value', isWin ? MY_WIN_TAGS : MY_LOSS_TAGS, 'purple');
+        }
+
+        async function saveMatch() {
             const oppName = document.getElementById('match-opponent').value;
             if(!oppName) return alert("이름을 입력하세요.");
             
@@ -1066,7 +1126,13 @@
             const scoreParts = scoreVal.split(':');
             const myS = parseInt(scoreParts[0]);
             const opS = parseInt(scoreParts[1]);
+            const result = myS > opS ? '승' : (myS === opS ? '무' : '패');
             
+            const tags = document.getElementById('match-tags-value').value ? document.getElementById('match-tags-value').value.split(',') : [];
+            const myTags = document.getElementById('my-tags-value').value ? document.getElementById('my-tags-value').value.split(',') : [];
+            const matchType = document.getElementById('match-type').value;
+            const memo = document.getElementById('match-memo').value;
+
             const match = {
                 id: Date.now(),
                 date: document.getElementById('match-date').value,
@@ -1079,22 +1145,60 @@
                 opponentFh: document.getElementById('match-opponent-fh').value,
                 opponentBh: document.getElementById('match-opponent-bh').value,
                 opponentServe: document.getElementById('match-opponent-serve').value,
-                tags: document.getElementById('match-tags-value').value ? document.getElementById('match-tags-value').value.split(',') : [],
-                myTags: document.getElementById('my-tags-value').value ? document.getElementById('my-tags-value').value.split(',') : [],
-                matchType: document.getElementById('match-type').value,
+                tags,
+                myTags,
+                matchType,
                 myScore: myS, opScore: opS,
-                result: myS > opS ? '승' : (myS === opS ? '무' : '패'),
-                memo: document.getElementById('match-memo').value
+                result,
+                memo,
+                aiAnalysis: "AI 분석 생성 중..."
             };
+
             state.matches.push(match);
             window._selectedPartnerId = null;
             saveState();
-            alert("저장 완료!");
+            
+            alert("기록이 저장되었습니다. AI가 경기를 분석합니다...");
+            
+            // Background AI Analysis
+            getAiAnalysis(match).then(analysis => {
+                const idx = state.matches.findIndex(m => m.id === match.id);
+                if (idx !== -1) {
+                    state.matches[idx].aiAnalysis = analysis;
+                    saveState(true);
+                    // 현재 히스토리 뷰라면 갱신
+                    if (!document.getElementById('view-history').classList.contains('hidden')) renderHistory();
+                }
+            });
+
             document.getElementById('match-form').reset();
             setTagButtons('match-tag-container', 'match-tags-value', [], 'indigo');
             setTagButtons('my-tag-container', 'my-tags-value', [], 'purple');
             document.getElementById('match-date').valueAsDate = new Date();
+            handleScoreChange(); // 리셋 후 태그 다시 초기화
             switchTab('dashboard');
+        }
+
+        async function getAiAnalysis(match) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [
+                        { text: `탁구 경기 결과를 분석하여 핵심 ${match.result==='승'?'승인':'패인'}을 한 줄로 요약해 주세요.
+                        상대: ${match.opponent} (${match.opponentStyle}, ${match.opponentHandicap}부)
+                        결과: ${match.myScore}:${match.opScore} (${match.result})
+                        상대 특징 태그: ${match.tags.join(', ')}
+                        나의 플레이 복기 태그: ${match.myTags.join(', ')}
+                        메모: ${match.memo}
+                        친근하고 전문적인 어조로 "~주효했습니다" 또는 "~아쉽습니다" 등의 형식으로 말해주세요. 한 문장으로 짧게 작성하세요.` }
+                    ]}]})
+                });
+                const d = await res.json();
+                return d.candidates[0].content.parts[0].text.trim();
+            } catch(e) {
+                return "분석을 일시적으로 불러올 수 없습니다.";
+            }
         }
 
         function renderHistory(filter = 'all') {
@@ -1155,6 +1259,12 @@
                                 <div class="bg-indigo-50/30 p-4 rounded-xl relative">
                                     <span class="absolute -top-2 left-3 bg-white px-2 py-0.5 rounded text-[8px] font-black text-indigo-400 border border-indigo-100 uppercase">Memo</span>
                                     <p class="text-[11px] text-slate-600 font-medium leading-relaxed italic">"${m.memo}"</p>
+                                </div>` : ''}
+
+                                ${m.aiAnalysis ? `
+                                <div class="bg-amber-50/40 p-4 rounded-xl relative border border-amber-100/50">
+                                    <span class="absolute -top-2 left-3 bg-white px-2 py-0.5 rounded text-[8px] font-black text-amber-500 border border-amber-200 uppercase flex items-center gap-1">✨ AI Insight</span>
+                                    <p class="text-[11px] text-slate-700 font-bold leading-relaxed">${m.aiAnalysis}</p>
                                 </div>` : ''}
 
                                 <div class="flex justify-end pt-2">
