@@ -590,6 +590,72 @@
         </div>
     </div>
 
+    <!-- Match Input Flow Modal (Wizard) -->
+    <div id="match-flow-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[180] flex justify-center items-end" onclick="if(event.target===this) closeMatchFlow()">
+        <div class="bg-white w-full max-w-md rounded-t-[3rem] shadow-2xl p-10 space-y-8 transform transition-transform duration-300 translate-y-full" id="match-flow-content">
+            <div class="flex justify-between items-center">
+                <h2 id="flow-title" class="text-2xl font-black text-slate-800">경기 기록 입력</h2>
+                <span id="flow-step-indicator" class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Step 1/3</span>
+            </div>
+
+            <!-- Step 1: Match Type -->
+            <div id="flow-step-1" class="space-y-6">
+                <div class="space-y-4">
+                    <label class="text-sm font-black text-slate-800">🏅 경기 구분을 선택해 주세요</label>
+                    <div class="grid grid-cols-1 gap-3">
+                        <button onclick="setFlowMatchType('친선경기')" class="w-full py-4 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-left font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 transition-all flex justify-between items-center">
+                            <span>🤝 친선경기</span>
+                            <span class="text-indigo-400">→</span>
+                        </button>
+                        <button onclick="setFlowMatchType('리그전')" class="w-full py-4 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-left font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 transition-all flex justify-between items-center">
+                            <span>🏆 리그전</span>
+                            <span class="text-indigo-400">→</span>
+                        </button>
+                        <button onclick="setFlowMatchType('생활체육대회')" class="w-full py-4 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-left font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 transition-all flex justify-between items-center">
+                            <span>🥇 생활체육대회</span>
+                            <span class="text-indigo-400">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Score -->
+            <div id="flow-step-2" class="hidden space-y-6">
+                <div class="space-y-4">
+                    <label class="text-sm font-black text-slate-800">📉 세트 스코어를 선택해 주세요</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setFlowScore('3:0')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">3 : 0</button>
+                        <button onclick="setFlowScore('3:1')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">3 : 1</button>
+                        <button onclick="setFlowScore('3:2')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">3 : 2</button>
+                        <button onclick="setFlowScore('2:3')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">2 : 3</button>
+                        <button onclick="setFlowScore('1:3')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">1 : 3</button>
+                        <button onclick="setFlowScore('0:3')" class="py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-indigo-50 transition-all">0 : 3</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Self-Diagnosis & Memo -->
+            <div id="flow-step-3" class="hidden space-y-6">
+                <div class="max-h-[50vh] overflow-y-auto no-scrollbar space-y-6 px-1">
+                    <div>
+                        <label class="text-sm font-black text-slate-800 mb-4 block">✨ 나의 플레이 복기 (자가 진단)</label>
+                        <div id="flow-my-tag-container" class="space-y-4"></div>
+                        <input type="hidden" id="flow-my-tags-value">
+                    </div>
+                    <div>
+                        <label class="text-sm font-black text-slate-800">📝 경기 메모</label>
+                        <textarea id="flow-memo" rows="3" placeholder="어떤 부분이 부족했나요?" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm font-medium resize-none outline-none mt-2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button id="flow-prev-btn" onclick="prevFlowStep()" class="hidden flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-sm btn-press">이전</button>
+                <button id="flow-save-btn" onclick="saveMatchFlow()" class="hidden flex-[2] py-4 premium-gradient text-white rounded-2xl font-bold text-sm shadow-xl btn-press">기록 저장하기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- API & State ---
         // TODO: 향후 환경변수(.env)로 분리 권장
@@ -634,6 +700,8 @@
             '공격 및 수비': ['#조급한공격', '#찬스볼놓침', '#발이무거움', '#테이블에서떨어짐', '#백핸드밀림'],
             '멘탈 및 운영': ['#리드시방심', '#초반긴장함', '#멘탈흔들림', '#후반체력저하', '#자멸형범실']
         };
+
+        const MY_STRATEGY_TAGS = MY_WIN_TAGS;
 
         window.onload = async () => {
             // URL 파라미터 체크 (자동 동기화 연결용)
@@ -1091,19 +1159,8 @@
         }
 
         function selectPartnerForMatch(id) {
-            const p = state.partners.find(p => p.id === id);
-            if (!p) return;
-            document.getElementById('match-opponent').value = p.name;
-            document.getElementById('match-opponent-handicap').value = p.handicap;
-            document.getElementById('match-opponent-style').value = p.style;
-            document.getElementById('match-opponent-hand').value = p.hand || '오른손';
-            document.getElementById('match-opponent-grip').value = p.grip || '셰이크핸드';
-            document.getElementById('match-opponent-fh').value = p.fh || '평면(민러버)';
-            document.getElementById('match-opponent-bh').value = p.bh || '평면(민러버)';
-            document.getElementById('match-opponent-serve').value = p.serve || '일반';
-            setTagButtons('match-tag-container', 'match-tags-value', p.tags || []);
-            window._selectedPartnerId = id;
             closePartnerSelect();
+            openMatchFlow(id);
         }
 
         function setScoreFromAI(my, op) {
@@ -1186,6 +1243,139 @@
             setTagButtons('my-tag-container', 'my-tags-value', [], 'purple');
             document.getElementById('match-date').valueAsDate = new Date();
             handleScoreChange(); // 리셋 후 태그 다시 초기화
+            switchTab('dashboard');
+        }
+
+        // --- MATCH FLOW (WIZARD) LOGIC ---
+        let flowState = { step: 1, matchType: '친선경기', score: '3:0' };
+
+        function openMatchFlow(partnerId) {
+            const p = state.partners.find(pa => pa.id === partnerId);
+            if (!p) return;
+            
+            window._selectedPartnerId = partnerId;
+            flowState = { step: 1, matchType: '친선경기', score: '3:0' };
+            
+            // UI 초기화
+            document.getElementById('flow-memo').value = '';
+            document.getElementById('flow-my-tags-value').value = '';
+            
+            updateFlowUI();
+            
+            const modal = document.getElementById('match-flow-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => document.getElementById('match-flow-content').classList.remove('translate-y-full'), 10);
+        }
+
+        function closeMatchFlow() {
+            document.getElementById('match-flow-content').classList.add('translate-y-full');
+            setTimeout(() => document.getElementById('match-flow-modal').classList.add('hidden'), 300);
+        }
+
+        function setFlowMatchType(type) {
+            flowState.matchType = type;
+            nextFlowStep();
+        }
+
+        function setFlowScore(score) {
+            flowState.score = score;
+            nextFlowStep();
+        }
+
+        function updateFlowUI() {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`flow-step-${i}`).classList.add('hidden');
+            }
+            document.getElementById(`flow-step-${flowState.step}`).classList.remove('hidden');
+            
+            document.getElementById('flow-step-indicator').innerText = `Step ${flowState.step}/3`;
+            
+            const prevBtn = document.getElementById('flow-prev-btn');
+            const saveBtn = document.getElementById('flow-save-btn');
+            
+            if (flowState.step === 1) {
+                prevBtn.classList.add('hidden');
+                saveBtn.classList.add('hidden');
+            } else if (flowState.step === 2) {
+                prevBtn.classList.remove('hidden');
+                saveBtn.classList.add('hidden');
+            } else if (flowState.step === 3) {
+                prevBtn.classList.remove('hidden');
+                saveBtn.classList.remove('hidden');
+                
+                const isWin = parseInt(flowState.score.split(':')[0]) > parseInt(flowState.score.split(':')[1]);
+                initTagButtons('flow-my-tag-container', 'flow-my-tags-value', isWin ? MY_WIN_TAGS : MY_LOSS_TAGS, 'purple');
+            }
+        }
+
+        function nextFlowStep() {
+            if (flowState.step < 3) {
+                flowState.step++;
+                updateFlowUI();
+            }
+        }
+
+        function prevFlowStep() {
+            if (flowState.step > 1) {
+                flowState.step--;
+                updateFlowUI();
+            }
+        }
+
+        async function saveMatchFlow() {
+            const p = state.partners.find(pa => pa.id === window._selectedPartnerId);
+            if (!p) {
+                alert("선택된 상대방 정보가 없습니다.");
+                closeMatchFlow();
+                return;
+            }
+
+            const scoreParts = flowState.score.split(':');
+            const myS = parseInt(scoreParts[0]);
+            const opS = parseInt(scoreParts[1]);
+            const result = myS > opS ? '승' : (myS === opS ? '무' : '패');
+            
+            const myTags = document.getElementById('flow-my-tags-value').value ? document.getElementById('flow-my-tags-value').value.split(',') : [];
+            const memo = document.getElementById('flow-memo').value;
+
+            const match = {
+                id: Date.now(),
+                updatedAt: Date.now(),
+                date: new Date().toISOString().split('T')[0], // 무조건 오늘 날짜
+                opponent: p.name,
+                opponentId: p.id,
+                opponentHandicap: p.handicap,
+                opponentStyle: p.style,
+                opponentHand: p.hand || '오른손',
+                opponentGrip: p.grip || '셰이크핸드',
+                opponentFh: p.fh || '평면(민러버)',
+                opponentBh: p.bh || '평면(민러버)',
+                opponentServe: p.serve || '일반',
+                tags: p.tags || [],
+                myTags,
+                matchType: flowState.matchType,
+                myScore: myS, opScore: opS,
+                result,
+                memo,
+                aiAnalysis: "AI 분석 생성 중..."
+            };
+
+            state.matches.push(match);
+            window._selectedPartnerId = null;
+            saveState();
+            
+            closeMatchFlow();
+            alert("기록이 저장되었습니다. AI가 경기를 분석합니다...");
+            
+            getAiAnalysis(match).then(analysis => {
+                const idx = state.matches.findIndex(m => m.id === match.id);
+                if (idx !== -1) {
+                    state.matches[idx].aiAnalysis = analysis;
+                    saveState(true);
+                    if (!document.getElementById('view-history').classList.contains('hidden')) renderHistory();
+                }
+            });
+
             switchTab('dashboard');
         }
 
