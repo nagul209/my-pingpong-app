@@ -757,7 +757,7 @@
         }
 
         function processRemoteState(remoteState) {
-            if (!remoteState) remoteState = { matches: [], partners: [] };
+            if (!remoteState) remoteState = { matches: [], partners: [], profile: {} };
 
             const ensureArray = (val) => {
                 if (!val) return [];
@@ -767,55 +767,64 @@
 
             const remoteMatches = ensureArray(remoteState.matches);
             const remotePartners = ensureArray(remoteState.partners);
+            const remoteProfile = remoteState.profile || {};
 
-            // 매치 데이터 병합
-            const localMatches = state.matches || [];
-            const allMatches = [...localMatches, ...remoteMatches];
-            const uniqueMatches = Array.from(new Map(allMatches.map(m => [m.id, m])).values());
-            const mergedMatches = uniqueMatches.sort((a, b) => a.id - b.id);
+            // Helper to merge arrays using updatedAt
+            const smartMerge = (localArr, remoteArr) => {
+                const map = new Map();
+                // Local first
+                localArr.forEach(item => map.set(item.id, item));
+                // Remote overrides if it exists and is newer (or if local doesn't have it)
+                remoteArr.forEach(remoteItem => {
+                    const localItem = map.get(remoteItem.id);
+                    if (!localItem || (remoteItem.updatedAt || 0) > (localItem.updatedAt || 0)) {
+                        map.set(remoteItem.id, remoteItem);
+                    }
+                });
+                return Array.from(map.values());
+            };
+
+            const mergedMatches = smartMerge(state.matches || [], remoteMatches).sort((a, b) => a.id - b.id);
+            const mergedPartners = smartMerge(state.partners || [], remotePartners);
             
-            // 파트너 데이터 병합
-            const localPartners = state.partners || [];
-            const allPartners = [...localPartners, ...remotePartners];
-            const uniquePartners = Array.from(new Map(allPartners.map(p => [p.id, p])).values());
-            const mergedPartners = uniquePartners;
-            
-            // 프로필 동기화
-            let mergedProfile = state.profile || { name: "탁구 꿈나무", handicap: "5", style: "드라이브 전형" };
-            if (remoteState.profile && remoteState.profile.name !== "탁구 꿈나무") {
-                mergedProfile = { ...mergedProfile, ...remoteState.profile };
-            } else if (mergedProfile.name === "탁구 꿈나무" && remoteState.profile) {
-                mergedProfile = { ...mergedProfile, ...remoteState.profile };
-            }
-            
-            // 오프라인/로컬에만 존재하거나 최신인 데이터가 병합되었다면 서버로 업로드 트리거 (무한루프 방지를 위해 배열 길이 및 속성 단순 비교)
-            const isMatchesDifferent = mergedMatches.length !== remoteMatches.length;
-            const isPartnersDifferent = mergedPartners.length !== remotePartners.length;
-            
-            let isProfileDifferent = false;
-            if (remoteState.profile) {
-                isProfileDifferent = (mergedProfile.name !== remoteState.profile.name) || 
-                                     (mergedProfile.handicap !== remoteState.profile.handicap) || 
-                                     (mergedProfile.style !== remoteState.profile.style);
-            } else if (mergedProfile.name !== "탁구 꿈나무") {
-                isProfileDifferent = true;
+            // Profile merge: compare updatedAt
+            let mergedProfile = { ...state.profile };
+            if (remoteProfile.updatedAt > (state.profile.updatedAt || 0)) {
+                mergedProfile = { ...mergedProfile, ...remoteProfile };
+            } else if (!state.profile.updatedAt && remoteProfile.name && remoteProfile.name !== "탁구 꿈나무") {
+                // Legacy support: if no updatedAt, use name heuristic
+                mergedProfile = { ...mergedProfile, ...remoteProfile };
             }
 
+            // Change detection using stringification (Deep Compare)
+            const oldStateStr = JSON.stringify(state);
+            
             state.matches = mergedMatches;
             state.partners = mergedPartners;
             state.profile = mergedProfile;
+
+            const newStateStr = JSON.stringify(state);
+            const isDifferent = oldStateStr !== newStateStr;
             
-            const shouldUpload = isMatchesDifferent || isPartnersDifferent || isProfileDifferent;
-            
-            saveState(shouldUpload); // 로컬 저장 (변경점이 있으면 서버로 업로드)
-            
-            // 화면 자동 갱신
-            updateProfileUI();
-            const activeNav = document.querySelector('.nav-active');
-            if (activeNav) {
-                if (activeNav.id === 'btn-dashboard') renderDashboard();
-                if (activeNav.id === 'btn-history') renderHistory();
-                if (activeNav.id === 'btn-partners') renderPartners();
+            // If the remote state was different from our merged state, it means we have local-only data 
+            // that needs to be pushed up, OR the merge resulted in something new.
+            const remoteStateStr = JSON.stringify(remoteState);
+            const shouldUpload = isDifferent || (newStateStr !== remoteStateStr);
+
+            if (isDifferent) {
+                saveState(shouldUpload);
+                
+                // UI Refresh
+                updateProfileUI();
+                const activeNav = document.querySelector('.nav-active');
+                if (activeNav) {
+                    if (activeNav.id === 'btn-dashboard') renderDashboard();
+                    if (activeNav.id === 'btn-history') renderHistory();
+                    if (activeNav.id === 'btn-partners') renderPartners();
+                }
+            } else if (shouldUpload) {
+                // If local state didn't change but it differs from remote, push our latest state
+                saveState(true);
             }
         }
 
@@ -924,9 +933,9 @@
 
             if(editingPartnerId) {
                 const idx = state.partners.findIndex(p => p.id === editingPartnerId);
-                state.partners[idx] = pData;
+                state.partners[idx] = { ...pData, updatedAt: Date.now() };
             } else {
-                state.partners.push(pData);
+                state.partners.push({ ...pData, updatedAt: Date.now() });
             }
             saveState();
             renderPartners();
@@ -1135,6 +1144,7 @@
 
             const match = {
                 id: Date.now(),
+                updatedAt: Date.now(),
                 date: document.getElementById('match-date').value,
                 opponent: oppName,
                 opponentId: window._selectedPartnerId || null,
@@ -1612,6 +1622,7 @@
             state.profile.name = document.getElementById('set-name').value;
             state.profile.handicap = document.getElementById('set-handicap').value;
             state.profile.style = document.getElementById('set-style').value;
+            state.profile.updatedAt = Date.now();
             saveState(); loadState(); closeSettings(); alert("프로필 저장 완료.");
         }
 
