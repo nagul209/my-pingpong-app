@@ -862,54 +862,81 @@
                             onchange="handlePhotoUpload(event)"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">구분</label><select
-                            id="mem-affiliation"
-                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
-                            <option value="시">시</option>
-                            <option value="구">구</option>
-                            <option value="레전드">레전드</option>
-                            <option value="초청">초청</option>
-                        </select></div>
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">부서/소속</label><input type="text"
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">소속</label><select
                             id="mem-dept"
-                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition"
-                            placeholder="예: 체육진흥과"></div>
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">등급</label><select id="mem-type"
                             class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
-                            <option value="연회원" selected>연회원</option>
-                            <option value="준회원">준회원</option>
-                            <option value="비회원">비회원</option>
+                            <option value="청라탁구">청라탁구</option>
+                            <option value="인천시청">인천시청</option>
+                            <option value="핑퐁조아">핑퐁조아</option>
+                            <option value="서구청">서구청</option>
+                            <option value="기타">기타</option>
                         </select></div>
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">직책</label><input type="text"
-                            id="mem-duty"
-                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition"
-                            placeholder="예: 총무"></div>
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">직급</label><input type="text"
-                            id="mem-rank"
-                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition"
-                            placeholder="예: 주무관"></div>
                     <div><label class="block font-bold text-indigo-600 mb-1.5 text-xs">* 이름 (필수)</label><input
                             type="text" id="mem-name"
                             class="w-full border border-indigo-200 bg-indigo-50/50 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition font-bold"
                             placeholder="홍길동"></div>
-                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">* 부수 (필수)</label><select
+                    <div><label class="block font-bold text-indigo-600 mb-1.5 text-xs">* 부수 (필수)</label><select
                             id="mem-handicap"
                             class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-700">
-                            <option value="1">1부</option>
-                            <option value="2">2부</option>
-                            <option value="3">3부</option>
-                            <option value="4">4부</option>
-                            <option value="5" selected>5부</option>
-                            <option value="6">6부</option>
-                            <option value="7">7부</option>
-                            <option value="8">8부</option>
-                            <option value="9">9부</option>
-                            <option value="10">10부</option>
+                            <option value="선수">선수</option>
+                            <option value="1부">1부</option>
+                            <option value="2부">2부</option>
+                            <option value="3부">3부</option>
+                            <option value="4부">4부</option>
+                            <option value="5부" selected>5부</option>
+                            <option value="6부">6부</option>
+                            <option value="7부">7부</option>
+                            <option value="통합8부">통합8부</option>
+                            <option value="통합9부">통합9부</option>
+                            <option value="통합10부">통합10부</option>
+                            <option value="희망부">희망부</option>
                         </select></div>
                     <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">성별</label><select id="mem-gender"
                             class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
-                            <option value="남">남</option>
-                            <option value="여">여</option>
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">주사용손</label><select id="mem-dominant-hand"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="오른손">오른손</option>
+                            <option value="왼손">왼손</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">전형</label><select id="mem-play-style"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="드라이브">드라이브</option>
+                            <option value="전진속공">전진속공</option>
+                            <option value="올라운드">올라운드</option>
+                            <option value="수비">수비</option>
+                            <option value="이질러버">이질러버</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">그립</label><select id="mem-grip"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="셰이크핸드">셰이크핸드</option>
+                            <option value="일본식 펜홀더">일본식 펜홀더</option>
+                            <option value="중국식 펜홀더">중국식 펜홀더</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">전면러버</label><select id="mem-front-rubber"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="평면">평면</option>
+                            <option value="숏핌플">숏핌플</option>
+                            <option value="롱핌플">롱핌플</option>
+                            <option value="미디엄핌플">미디엄핌플</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">후면러버</label><select id="mem-back-rubber"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="평면">평면</option>
+                            <option value="숏핌플">숏핌플</option>
+                            <option value="롱핌플">롱핌플</option>
+                            <option value="미디엄핌플">미디엄핌플</option>
+                        </select></div>
+                    <div><label class="block font-bold text-slate-600 mb-1.5 text-xs">주력서브</label><select id="mem-main-serve"
+                            class="w-full border-0 bg-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="일반/미지정">일반/미지정</option>
+                            <option value="회전/횡서브">회전/횡서브</option>
+                            <option value="커트서브">커트서브</option>
+                            <option value="훅서브">훅서브</option>
+                            <option value="YG서브">YG서브</option>
+                            <option value="빠른 롱서브">빠른 롱서브</option>
                         </select></div>
                     <div class="col-span-2"><label
                             class="block font-bold text-slate-600 mb-1.5 text-xs">상태</label><select id="mem-status"
@@ -3630,12 +3657,109 @@
                 list.innerHTML += `<li class="flex flex-col p-3.5 ${inactiveClass} hover:bg-slate-50 transition-colors border-b border-slate-50 cursor-pointer" onclick="toggleMemberInfo(${m.id})"><div class="flex justify-between items-center gap-3 flex-wrap sm:flex-nowrap w-full"><div class="flex items-center gap-3 flex-1">${photoHtml}<div><div class="flex items-center gap-1.5">${dutyIcon}<span class="font-extrabold ${nameColorClass} text-[13px]">${escapeHTML(m.name)}</span> <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">${m.handicap}부</span>${badge}</div><div class="text-[11px] text-slate-400 mt-1 font-medium">${infoStr}</div></div></div>${adminButtons}</div>${detailsHtml}</li>`;
             });
         }
-        function editMember(id) { const member = members.find(m => m.id === id); if (!member) return; editingMemberId = id; document.getElementById('form-title').innerText = "✏️ 회원 정보 수정"; document.getElementById('btn-save-member').innerText = "수정 완료"; document.getElementById('btn-save-member').classList.replace('bg-slate-800', 'bg-indigo-600'); document.getElementById('btn-cancel-edit').classList.remove('hidden'); document.getElementById('mem-affiliation').value = member.affiliation || '시'; document.getElementById('mem-dept').value = member.dept || ''; document.getElementById('mem-type').value = member.type || '연회원'; document.getElementById('mem-duty').value = member.duty || ''; document.getElementById('mem-rank').value = member.rank || ''; document.getElementById('mem-name').value = member.name || ''; document.getElementById('mem-handicap').value = member.handicap || '5'; document.getElementById('mem-gender').value = member.gender || '남'; document.getElementById('mem-status').value = member.status || 'active'; document.getElementById('mem-phone').value = member.phone || ''; currentPhotoBase64 = member.photo || ''; if (currentPhotoBase64) { document.getElementById('photo-preview').src = currentPhotoBase64; document.getElementById('photo-preview').classList.remove('hidden'); document.getElementById('photo-placeholder').classList.add('hidden'); } else { document.getElementById('photo-preview').classList.add('hidden'); document.getElementById('photo-placeholder').classList.remove('hidden'); } document.getElementById('member-form-container').scrollIntoView({ behavior: 'smooth' }); }
+        function editMember(id) {
+            const member = members.find(m => m.id === id);
+            if (!member) return;
+            editingMemberId = id;
+            document.getElementById('form-title').innerText = "✏️ 회원 정보 수정";
+            document.getElementById('btn-save-member').innerText = "수정 완료";
+            document.getElementById('btn-save-member').classList.replace('bg-slate-800', 'bg-indigo-600');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+            // 폼 데이터 로드
+            document.getElementById('mem-dept').value = member.dept || '기타';
+            document.getElementById('mem-name').value = member.name || '';
+            document.getElementById('mem-handicap').value = member.handicapStr || (member.handicap ? (member.handicap + '부') : '5부');
+            document.getElementById('mem-gender').value = member.gender || '남성';
+            document.getElementById('mem-dominant-hand').value = member.dominantHand || '오른손';
+            document.getElementById('mem-play-style').value = member.playStyle || '드라이브';
+            document.getElementById('mem-grip').value = member.grip || '셰이크핸드';
+            document.getElementById('mem-front-rubber').value = member.frontRubber || '평면';
+            document.getElementById('mem-back-rubber').value = member.backRubber || '평면';
+            document.getElementById('mem-main-serve').value = member.mainServe || '일반/미지정';
+            document.getElementById('mem-status').value = member.status || 'active';
+            document.getElementById('mem-phone').value = member.phone || '';
+
+            currentPhotoBase64 = member.photo || '';
+            if (currentPhotoBase64) {
+                document.getElementById('photo-preview').src = currentPhotoBase64;
+                document.getElementById('photo-preview').classList.remove('hidden');
+                document.getElementById('photo-placeholder').classList.add('hidden');
+            } else {
+                document.getElementById('photo-preview').classList.add('hidden');
+                document.getElementById('photo-placeholder').classList.remove('hidden');
+            }
+            document.getElementById('member-form-container').scrollIntoView({ behavior: 'smooth' });
+        }
+
         function saveMember() {
             if (!isAdmin) { alert("관리자 모드에서만 사용할 수 있는 기능입니다."); return; }
-            const name = document.getElementById('mem-name').value; if (!name) { alert("이름을 입력해주세요."); return; } const handicapVal = document.getElementById('mem-handicap').value; const memberData = { name: name, affiliation: document.getElementById('mem-affiliation').value, dept: document.getElementById('mem-dept').value, type: document.getElementById('mem-type').value, duty: document.getElementById('mem-duty').value, rank: document.getElementById('mem-rank').value, handicap: parseInt(handicapVal) || 5, gender: document.getElementById('mem-gender').value, phone: document.getElementById('mem-phone').value, photo: currentPhotoBase64, status: document.getElementById('mem-status').value }; if (editingMemberId !== null) { const index = members.findIndex(m => m.id === editingMemberId); if (index !== -1) members[index] = { ...members[index], ...memberData }; alert('회원 정보가 수정되었습니다.'); } else { memberData.id = nextMemberId++; memberData.score = 0.0; memberData.prevRank = members.length + 1; members.push(memberData); alert('신규 회원이 등록되었습니다.'); } cancelEdit(); saveDataToStorage();
+            const name = document.getElementById('mem-name').value;
+            if (!name) { alert("이름을 입력해주세요."); return; }
+
+            // 부수 숫자 추출 및 처리
+            const handicapStr = document.getElementById('mem-handicap').value;
+            let handicapNum = parseInt(handicapStr.replace(/[^0-9]/g, '')) || 5;
+            if (handicapStr === '선수') handicapNum = 0;
+            if (handicapStr === '희망부') handicapNum = 11;
+
+            const memberData = {
+                name: name,
+                dept: document.getElementById('mem-dept').value,
+                handicap: handicapNum,
+                handicapStr: handicapStr,
+                gender: document.getElementById('mem-gender').value,
+                dominantHand: document.getElementById('mem-dominant-hand').value,
+                playStyle: document.getElementById('mem-play-style').value,
+                grip: document.getElementById('mem-grip').value,
+                frontRubber: document.getElementById('mem-front-rubber').value,
+                backRubber: document.getElementById('mem-back-rubber').value,
+                mainServe: document.getElementById('mem-main-serve').value,
+                status: document.getElementById('mem-status').value,
+                phone: document.getElementById('mem-phone').value,
+                photo: currentPhotoBase64
+            };
+
+            if (editingMemberId !== null) {
+                const index = members.findIndex(m => m.id === editingMemberId);
+                if (index !== -1) members[index] = { ...members[index], ...memberData };
+                alert('회원 정보가 수정되었습니다.');
+            } else {
+                memberData.id = nextMemberId++;
+                memberData.score = 0.0;
+                memberData.prevRank = members.length + 1;
+                members.push(memberData);
+                alert('신규 회원이 등록되었습니다.');
+            }
+            cancelEdit();
+            saveDataToStorage();
         }
-        function cancelEdit() { editingMemberId = null; document.getElementById('form-title').innerText = "회원 개별 등록"; document.getElementById('btn-save-member').innerText = "회원 저장하기"; document.getElementById('btn-save-member').classList.replace('bg-indigo-600', 'bg-slate-800'); document.getElementById('btn-cancel-edit').classList.add('hidden');['mem-name', 'mem-dept', 'mem-duty', 'mem-rank', 'mem-phone'].forEach(id => document.getElementById(id).value = ''); document.getElementById('mem-affiliation').value = '시'; document.getElementById('mem-type').value = '연회원'; document.getElementById('mem-handicap').value = '5'; document.getElementById('mem-gender').value = '남'; document.getElementById('mem-status').value = 'active'; currentPhotoBase64 = ''; document.getElementById('photo-preview').classList.add('hidden'); document.getElementById('photo-placeholder').classList.remove('hidden'); document.getElementById('mem-photo').value = ''; }
+
+        function cancelEdit() {
+            editingMemberId = null;
+            document.getElementById('form-title').innerText = "새 회원 개별 등록";
+            document.getElementById('btn-save-member').innerText = "회원 저장하기";
+            document.getElementById('btn-save-member').classList.replace('bg-indigo-600', 'bg-slate-800');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+
+            // 폼 초기화 (모든 <select>는 첫 번째 옵션으로, <input>은 빈 값으로)
+            ['mem-name', 'mem-phone'].forEach(id => document.getElementById(id).value = '');
+            
+            const selects = [
+                'mem-dept', 'mem-handicap', 'mem-gender', 'mem-dominant-hand', 
+                'mem-play-style', 'mem-grip', 'mem-front-rubber', 'mem-back-rubber', 
+                'mem-main-serve', 'mem-status'
+            ];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.selectedIndex = 0;
+            });
+
+            currentPhotoBase64 = '';
+            document.getElementById('photo-preview').classList.add('hidden');
+            document.getElementById('photo-placeholder').classList.remove('hidden');
+            document.getElementById('mem-photo').value = '';
+        }
 
         function handlePhotoUpload(event) {
             const file = event.target.files[0];
