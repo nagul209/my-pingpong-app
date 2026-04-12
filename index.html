@@ -243,8 +243,8 @@
     <header
         class="bg-gradient-to-r from-blue-700 to-indigo-600 p-4 text-white flex justify-between items-center relative z-20 shadow-md rounded-b-[2.5rem]">
         <div>
-            <h1 class="text-xl font-extrabold tracking-tight">🏓 인천시 탁구동호회 토요리그</h1>
-            <p class="text-[11px] opacity-80 font-medium mt-0.5">토요리그 통합 관리 시스템</p>
+            <h1 class="text-xl font-extrabold tracking-tight">🏓 나의 탁구 기록기</h1>
+            <p class="text-[11px] opacity-80 font-medium mt-0.5">탁구 관리 시스템</p>
         </div>
         <div class="flex gap-2">
             <button onclick="toggleViewMode()" id="btn-view-toggle"
@@ -1785,15 +1785,15 @@
                 const jsonString = JSON.stringify(exportData, null, 2);
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
+
                 const now = new Date();
-                const dateStr = now.getFullYear() + 
-                                String(now.getMonth() + 1).padStart(2, '0') + 
-                                String(now.getDate()).padStart(2, '0');
-                const timeStr = String(now.getHours()).padStart(2, '0') + 
-                                String(now.getMinutes()).padStart(2, '0') + 
-                                String(now.getSeconds()).padStart(2, '0');
-                
+                const dateStr = now.getFullYear() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+                const timeStr = String(now.getHours()).padStart(2, '0') +
+                    String(now.getMinutes()).padStart(2, '0') +
+                    String(now.getSeconds()).padStart(2, '0');
+
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = `탁구운영_임시저장_${dateStr}_${timeStr}.json`;
@@ -1813,7 +1813,7 @@
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.json';
-            
+
             fileInput.onchange = e => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1822,7 +1822,7 @@
                 reader.onload = event => {
                     try {
                         const importedData = JSON.parse(event.target.result);
-                        
+
                         // 데이터 복구
                         if (importedData.opAttend) formState.opAttend = importedData.opAttend;
                         if (importedData.multiLeagues) window.multiLeagues = importedData.multiLeagues;
@@ -1856,7 +1856,7 @@
                                         if (i === j) continue;
                                         let input = document.getElementById(`score-${league.id}-g${g}-r${i}-c${j}`);
                                         if (input && league.scores && league.scores[g] && league.scores[g][i]) {
-                                            input.value = league.scores[g][i][j] || ''; 
+                                            input.value = league.scores[g][i][j] || '';
                                             syncText(input);
                                         }
                                     }
@@ -2253,7 +2253,7 @@
                     const displayName = `${m.name}(${m.handicap})`;
                     // 현재 슬롯(p)에 선수 데이터 할당
                     league.players[`g${g}_p${p}`] = { id: m.id, name: m.name, display: displayName, handicap: m.handicap };
-                    
+
                     // 현재 슬롯의 UI 업데이트 (input 및 span)
                     const currentTd = document.getElementById(`td-${leagueId}-g${g}-p${p}`);
                     const currentInput = currentTd ? currentTd.querySelector('input') : inputElem;
@@ -2271,7 +2271,7 @@
                     if (p <= maxPlayers) {
                         // 제목 갱신
                         document.getElementById('selector-title').innerText = `${g}조 ${p}번 선수 선택 (${limitText})`;
-                        
+
                         // 제외 명단 다시 계산 (선택된 선수 포함)
                         let newExcludedNames = [];
                         for (let key in league.players) {
@@ -2280,7 +2280,7 @@
                                 newExcludedNames.push(...names);
                             }
                         }
-                        
+
                         // 남은 명단으로 재렌더링 (모달 유지)
                         renderSelectorList(true, 'league', newExcludedNames);
                         updateSelectorCount();
@@ -2438,7 +2438,7 @@
             }
 
             let bracketPlayers = new Array(size).fill(null);
-            
+
             // 3조 8명 진출 (24명) 특수 템플릿 처리
             if (groups === 3 && adv === 8) {
                 bracketPlayers = ['1조1위', '부전승(BYE)', '2조6위', '3조6위', '2조3위', '1조8위', '부전승(BYE)', '1조3위', '3조2위', '부전승(BYE)', '3조7위', '1조5위', '3조4위', '2조7위', '부전승(BYE)', '2조2위', '2조1위', '부전승(BYE)', '1조7위', '3조5위', '2조4위', '3조8위', '부전승(BYE)', '1조2위', '3조3위', '부전승(BYE)', '2조8위', '1조4위', '2조5위', '1조6위', '부전승(BYE)', '3조1위'];
@@ -2505,7 +2505,7 @@
                         for (let p = 1; p <= size; p++) {
                             let playerObj = league.players[`g${g}_p${p}`];
                             let rankInput = document.getElementById(`rank-${league.id}-g${g}-p${p}`);
-                            
+
                             if (playerObj && rankInput && rankInput.value.trim() !== "") {
                                 // [강력한 로직] 유연한 순위 텍스트 추출 (숫자만 남김)
                                 let rankNum = rankInput.value.replace(/[^0-9]/g, '');
@@ -2523,8 +2523,8 @@
             let mappedCount = 0;
             const size = tournamentState.tree[0].length;
             // 대진표 치환 시 원본 템플릿(X조 Y위 등) 기준으로 매핑 시도
-            const baseTemplate = (tournamentState.originalTemplate && tournamentState.originalTemplate.length === size) 
-                ? tournamentState.originalTemplate 
+            const baseTemplate = (tournamentState.originalTemplate && tournamentState.originalTemplate.length === size)
+                ? tournamentState.originalTemplate
                 : [...tournamentState.tree[0]];
 
             for (let i = 0; i < size; i++) {
@@ -2547,12 +2547,12 @@
             if (mappedCount > 0) {
                 // [요구사항] 성공 알림창 및 즉시 갱신
                 alert(`✅ 총 ${mappedCount}명의 예선 결과가 대진표에 연동되었습니다.`);
-                
+
                 // 남은 라운드 초기화
                 for (let r = 1; r <= tournamentState.rounds; r++) {
                     tournamentState.tree[r].fill("");
                 }
-                
+
                 propagateByes();
                 renderTournamentUI();
                 saveDataToStorage();
@@ -2575,7 +2575,7 @@
 
         function handleTournamentClick(round, idx) {
             if (!isAdmin) return;
-            
+
             // 자리 변경 모드 처리 (1라운드 시드만 가능)
             if (isSwapMode) {
                 if (round === 0) {
@@ -2600,16 +2600,16 @@
                     renderTournamentUI();
                     return;
                 }
-                
+
                 // 위치 교환
                 const temp = tournamentState.tree[0][swapFirstPick];
                 tournamentState.tree[0][swapFirstPick] = tournamentState.tree[0][idx];
                 tournamentState.tree[0][idx] = temp;
-                
+
                 // 연쇄적 결과 초기화 및 부전승 재계산
                 cascadeClearTournament(0, swapFirstPick);
                 cascadeClearTournament(0, idx);
-                
+
                 swapFirstPick = null;
                 propagateByes();
                 renderTournamentUI();
@@ -2739,7 +2739,7 @@
 
         function toggleTournamentWinner(round, idx) {
             if (!isAdmin) return;
-            
+
             const player = tournamentState.tree[round][idx];
             if (!player || player === "부전승(BYE)") return;
 
