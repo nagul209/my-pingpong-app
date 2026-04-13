@@ -505,9 +505,22 @@
 
         <div id="view-member-public" class="hidden animate-fade-in pb-24">
             <div class="mb-6 flex flex-col gap-4">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between px-1">
                     <h2 class="text-2xl font-black text-slate-800 tracking-tight">회원 명단</h2>
-                    <span id="public-member-count" class="text-[11px] font-black text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm">조회 0명</span>
+                    <div class="flex items-center gap-3">
+                        <!-- ↕️ 정렬 버튼 (우측 상단) -->
+                        <div class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                            <span class="text-[10px] font-black text-slate-400">정렬</span>
+                            <select id="public-sort-select" onchange="renderMemberPublicList()"
+                                class="text-[11px] font-black text-indigo-600 outline-none bg-transparent cursor-pointer">
+                                <option value="handicap_asc">부수 낮은순 ↑</option>
+                                <option value="handicap_desc">부수 높은순 ↓</option>
+                                <option value="name_asc">이름 가나다순</option>
+                                <option value="dept_asc">소속 가나다순</option>
+                            </select>
+                        </div>
+                        <span id="public-member-count" class="text-[11px] font-black text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm">조회 0명</span>
+                    </div>
                 </div>
 
                 <!-- 🌟 고도화된 필터 섹션 -->
@@ -557,20 +570,6 @@
                                 <select id="public-filter-style" onchange="renderMemberPublicList()"
                                     class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-extrabold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
                                     <option value="">전체 전형</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- 하단 정렬 바 -->
-                        <div class="flex items-center justify-end pt-2 border-t border-slate-50">
-                            <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                                <span class="text-[10px] font-bold text-slate-400">정렬</span>
-                                <select id="public-sort-select" onchange="renderMemberPublicList()"
-                                    class="text-[11px] font-black text-slate-700 outline-none bg-transparent cursor-pointer">
-                                    <option value="handicap_asc">부수 낮은순 ↑</option>
-                                    <option value="handicap_desc">부수 높은순 ↓</option>
-                                    <option value="name_asc">이름 가나다순</option>
-                                    <option value="dept_asc">소속 가나다순</option>
                                 </select>
                             </div>
                         </div>
@@ -998,36 +997,72 @@
                 </div>
             </div>
             <div class="mb-4">
-                <div class="flex justify-between items-end mb-3 px-1">
-                    <h3 class="font-extrabold text-lg text-slate-800">전체 회원 목록</h3><span
-                        class="text-xs text-indigo-600 font-bold bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100"
-                        id="total-members-count">총 0명</span>
-                </div>
-                <div class="flex flex-col gap-2 mb-4">
-                    <!-- 2단계 필터 시스템 -->
-                    <div class="flex gap-2">
-                        <select id="member-filter-target" onchange="handleFilterTargetChange()"
-                            class="w-28 sm:w-32 border border-slate-200 bg-white p-3 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 shadow-sm outline-none transition-all">
-                            <option value="name">👤 이름</option>
-                            <option value="affiliation_only">🏁 구분</option>
-                            <option value="dept">🏢 소속/부서</option>
-                            <option value="gender">👫 성별</option>
-                            <option value="type">🏷️ 등급</option>
-                        </select>
-                        <div id="member-filter-value-container" class="flex-1">
-                            <input type="text" id="member-filter-value" oninput="renderMembersList()"
-                                placeholder="검색어 입력"
-                                class="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                <div class="flex justify-between items-center mb-4 px-1">
+                    <h3 class="font-extrabold text-lg text-slate-800">전체 회원 목록</h3>
+                    <div class="flex items-center gap-2">
+                         <!-- ↕️ 정렬 버튼 (우측 상단) -->
+                        <div class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                            <span class="text-[9px] font-black text-slate-400">정렬</span>
+                            <select id="member-sort-select" onchange="renderMembersList()"
+                                class="text-[10px] font-black text-indigo-600 outline-none bg-transparent cursor-pointer">
+                                <option value="handicap_asc">부수 낮은순 ↑</option>
+                                <option value="handicap_desc">부수 높은순 ↓</option>
+                                <option value="name_asc">이름 가나다순</option>
+                                <option value="dept_asc">소속 가나다순</option>
+                            </select>
                         </div>
+                        <span id="total-members-count" class="text-[10px] text-indigo-600 font-extrabold bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100">총 0명</span>
                     </div>
-                    <!-- 정렬 옵션 -->
-                    <div class="w-full">
-                        <select id="member-sort-select" onchange="renderMembersList()"
-                            class="w-full border border-slate-200 bg-white p-3 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 shadow-sm outline-none transition-all">
-                            <option value="default">🔢 등급순(기본)</option>
-                            <option value="name">🔤 이름 가나다순</option>
-                            <option value="handicap">📉 부수 낮은순</option>
-                        </select>
+                </div>
+
+                <!-- 🌟 고도화된 필터 섹션 -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-3">
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs text-center pb-0.5">🔍</span>
+                                <input type="text" id="member-search-name" oninput="renderMembersList()"
+                                    placeholder="회원명 검색..."
+                                    class="w-full bg-slate-50 border border-slate-200 pl-9 pr-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                            </div>
+                            <button onclick="resetAdminFilters()" 
+                                class="bg-slate-100 text-slate-500 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors btn-press">
+                                초기화
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 ml-1 uppercase tracking-wider">소속(팀)</label>
+                                <select id="member-filter-dept" onchange="renderMembersList()"
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-extrabold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                    <option value="">전체 소속</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 ml-1 uppercase tracking-wider">부수</label>
+                                <select id="member-filter-handicap" onchange="renderMembersList()"
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-extrabold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                    <option value="">전체 부수</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 ml-1 uppercase tracking-wider">성별</label>
+                                <select id="member-filter-gender" onchange="renderMembersList()"
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-extrabold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                    <option value="">전체 성별</option>
+                                    <option value="남성">남성</option>
+                                    <option value="여성">여성</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 ml-1 uppercase tracking-wider">전형</label>
+                                <select id="member-filter-style" onchange="renderMembersList()"
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-extrabold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                    <option value="">전체 전형</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1594,8 +1629,12 @@
                 }
             });
             if (tabName === 'member-public') {
-                updatePublicFilterOptions();
+                updateAllFilterOptions();
                 renderMemberPublicList();
+            }
+            if (tabName === 'member') {
+                updateAllFilterOptions();
+                renderMembersList();
             }
             if (tabName === 'input' && !editingMatchId) cancelInputStep2(); if (tabName === 'member' && editingMemberId) cancelEdit(); window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -3517,40 +3556,47 @@
         // 📋 [일반 사용자용] 회원 목록 조회 로직
         // ==============================================================================
 
-        // 🌟 회원 목록 필터 옵션 동적 업데이트
-        function updatePublicFilterOptions() {
-            const deptSelect = document.getElementById('public-filter-dept');
-            const handicapSelect = document.getElementById('public-filter-handicap');
-            const styleSelect = document.getElementById('public-filter-style');
+        // 🌟 모든 회원 목록 필터 옵션 동적 업데이트
+        function updateAllFilterOptions() {
+            const targets = [
+                { dept: 'public-filter-dept', handicap: 'public-filter-handicap', style: 'public-filter-style' },
+                { dept: 'member-filter-dept', handicap: 'member-filter-handicap', style: 'member-filter-style' }
+            ];
             
-            if (!deptSelect || !handicapSelect || !styleSelect) return;
+            targets.forEach(ids => {
+                const deptSelect = document.getElementById(ids.dept);
+                const handicapSelect = document.getElementById(ids.handicap);
+                const styleSelect = document.getElementById(ids.style);
+                
+                if (!deptSelect || !handicapSelect || !styleSelect) return;
 
-            // 소속(팀) 옵션
-            const depts = [...new Set(members.map(m => m.dept).filter(Boolean))].sort();
-            const currentDept = deptSelect.value;
-            deptSelect.innerHTML = '<option value="">전체 소속</option>' + 
-                depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
-            deptSelect.value = currentDept;
+                // 소속 옵션
+                const depts = [...new Set(members.map(m => m.dept).filter(Boolean))].sort();
+                const currentDept = deptSelect.value;
+                deptSelect.innerHTML = '<option value="">전체 소속</option>' + 
+                    depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+                deptSelect.value = depts.includes(currentDept) ? currentDept : "";
 
-            // 부수 옵션
-            const handicaps = [...new Set(members.map(m => m.handicap).filter(h => h !== undefined))].sort((a, b) => a - b);
-            const currentHandicap = handicapSelect.value;
-            handicapSelect.innerHTML = '<option value="">전체 부수</option>' + 
-                handicaps.map(h => `<option value="${h}">${h}부</option>`).join('');
-            handicapSelect.value = currentHandicap;
+                // 부수 옵션
+                const handicaps = [...new Set(members.map(m => m.handicap).filter(h => h !== undefined))].sort((a, b) => a - b);
+                const currentHandicap = handicapSelect.value;
+                handicapSelect.innerHTML = '<option value="">전체 부수</option>' + 
+                    handicaps.map(h => `<option value="${h}">${h}부</option>`).join('');
+                handicapSelect.value = handicaps.some(h => String(h) === currentHandicap) ? currentHandicap : "";
 
-            // 전형 옵션 (grip과 playStyle 통합)
-            const styles = [...new Set([
-                ...members.map(m => m.grip).filter(Boolean),
-                ...members.map(m => m.playStyle).filter(Boolean)
-            ])].sort();
-            const currentStyle = styleSelect.value;
-            styleSelect.innerHTML = '<option value="">전체 전형</option>' + 
-                styles.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
-            styleSelect.value = currentStyle;
+                // 전형 옵션
+                const styles = [...new Set([
+                    ...members.map(m => m.grip).filter(Boolean),
+                    ...members.map(m => m.playStyle).filter(Boolean)
+                ])].sort();
+                const currentStyle = styleSelect.value;
+                styleSelect.innerHTML = '<option value="">전체 전형</option>' + 
+                    styles.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
+                styleSelect.value = styles.includes(currentStyle) ? currentStyle : "";
+            });
         }
 
-        // 🌟 회원 목록 필터 초기화
+        // 🌟 공개용 필터 초기화
         function resetPublicFilters() {
             document.getElementById('public-search-name').value = '';
             document.getElementById('public-filter-dept').value = '';
@@ -3561,11 +3607,21 @@
             renderMemberPublicList();
         }
 
+        // 🌟 관리자용 필터 초기화
+        function resetAdminFilters() {
+            document.getElementById('member-search-name').value = '';
+            document.getElementById('member-filter-dept').value = '';
+            document.getElementById('member-filter-handicap').value = '';
+            document.getElementById('member-filter-gender').value = '';
+            document.getElementById('member-filter-style').value = '';
+            document.getElementById('member-sort-select').value = 'handicap_asc';
+            renderMembersList();
+        }
+
         function renderMemberPublicList() {
             const listBody = document.getElementById('public-member-list-body');
             if (!listBody) return;
 
-            // 필터 값 읽기
             const searchName = (document.getElementById('public-search-name').value || "").toLowerCase().trim();
             const filterDept = document.getElementById('public-filter-dept').value;
             const filterHandicap = document.getElementById('public-filter-handicap').value;
@@ -3573,32 +3629,28 @@
             const filterStyle = document.getElementById('public-filter-style').value;
             const sortMode = document.getElementById('public-sort-select').value;
 
-            // 1. 필터링 로직 (AND 조건)
             let filtered = members.filter(m => {
-                // 기본 노출 조건: 연회원 또는 초청 회원
                 const isInvite = m.affiliation === '초청';
                 const isRegular = m.type === '연회원';
                 if (!isRegular && !isInvite) return false;
 
-                // 이름 검색
                 if (searchName !== "" && !m.name.toLowerCase().includes(searchName)) return false;
-                
-                // 소속 필터
                 if (filterDept !== "" && m.dept !== filterDept) return false;
-                
-                // 부수 필터
                 if (filterHandicap !== "" && String(m.handicap) !== filterHandicap) return false;
-                
-                // 성별 필터
                 if (filterGender !== "" && m.gender !== filterGender) return false;
                 
-                // 전형 필터 (grip 또는 playStyle 중 하나라도 일치하면 포함)
-                if (filterStyle !== "" && m.grip !== filterStyle && m.playStyle !== filterStyle) return false;
+                // 전형 필터 (그립 또는 플레이 스타일 포함 검색)
+                if (filterStyle !== "") {
+                    const grip = (m.grip || "").toLowerCase();
+                    const playStyle = (m.playStyle || "").toLowerCase();
+                    const target = filterStyle.toLowerCase();
+                    if (!grip.includes(target) && !playStyle.includes(target)) return false;
+                }
 
                 return true;
             });
 
-            // 2. 정렬 로직
+            // 정렬 로직
             filtered.sort((a, b) => {
                 if (sortMode === 'name_asc') {
                     return a.name.localeCompare(b.name);
@@ -3611,7 +3663,6 @@
                     if (a.handicap !== b.handicap) return b.handicap - a.handicap;
                     return a.name.localeCompare(b.name);
                 } else {
-                    // handicap_asc (기본)
                     if (a.handicap !== b.handicap) return a.handicap - b.handicap;
                     return a.name.localeCompare(b.name);
                 }
@@ -3654,7 +3705,7 @@
                         <td class="px-2 py-4 align-middle text-center">
                             <div class="flex flex-col gap-1 items-center">
                                 <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100/50">${escapeHTML(m.gender || '-')}</span>
-                                <span class="text-[9px] text-slate-400 font-medium truncate max-w-[50px]">${escapeHTML(m.grip || m.playStyle || '-')}</span>
+                                <span class="text-[8px] text-slate-400 font-medium truncate max-w-[50px]">${escapeHTML(m.grip || m.playStyle || '-')}</span>
                             </div>
                         </td>
                     </tr>`;
@@ -3663,52 +3714,52 @@
 
         function renderMembersList() {
             const list = document.getElementById('member-list-display');
-            const filterTarget = document.getElementById('member-filter-target');
-            const filterValue = document.getElementById('member-filter-value');
-            const sortSelect = document.getElementById('member-sort-select');
+            if (!list) return;
 
-            const target = filterTarget ? filterTarget.value : "name";
-            const val = filterValue ? filterValue.value.toLowerCase().trim() : "";
-            const sortMode = sortSelect ? sortSelect.value : "default";
+            const searchName = (document.getElementById('member-search-name').value || "").toLowerCase().trim();
+            const filterDept = document.getElementById('member-filter-dept').value;
+            const filterHandicap = document.getElementById('member-filter-handicap').value;
+            const filterGender = document.getElementById('member-filter-gender').value;
+            const filterStyle = document.getElementById('member-filter-style').value;
+            const sortMode = document.getElementById('member-sort-select').value;
 
-            // 1. 고도화된 필터링 로직
+            // 1. 고도화된 필터링 로직 (AND 조건)
             let filteredMembers = members.filter(m => {
-                if (val === "") return true;
-
-                if (target === 'name') {
-                    return (m.name || "").toLowerCase().includes(val);
-                } else if (target === 'affiliation_only') {
-                    return m.affiliation === val;
-                } else if (target === 'dept') {
-                    return (m.dept || "").toLowerCase().includes(val);
-                } else if (target === 'gender') {
-                    return m.gender === val;
-                } else if (target === 'type') {
-                    return m.type === val;
+                if (searchName !== "" && !m.name.toLowerCase().includes(searchName)) return false;
+                if (filterDept !== "" && m.dept !== filterDept) return false;
+                if (filterHandicap !== "" && String(m.handicap) !== filterHandicap) return false;
+                if (filterGender !== "" && m.gender !== filterGender) return false;
+                
+                if (filterStyle !== "") {
+                    const grip = (m.grip || "").toLowerCase();
+                    const playStyle = (m.playStyle || "").toLowerCase();
+                    const target = filterStyle.toLowerCase();
+                    if (!grip.includes(target) && !playStyle.includes(target)) return false;
                 }
                 return true;
             });
 
-            // 2. 정렬 로직 (총점 제거)
-            const typeOrder = { "연회원": 1, "준회원": 2, "비회원": 3 };
+            // 2. 정렬 로직
             filteredMembers.sort((a, b) => {
-                if (sortMode === 'name') {
+                if (sortMode === 'name_asc') {
                     return a.name.localeCompare(b.name);
-                } else if (sortMode === 'handicap') {
-                    if (a.handicap !== b.handicap) return a.handicap - b.handicap;
+                } else if (sortMode === 'dept_asc') {
+                    const deptA = a.dept || '';
+                    const deptB = b.dept || '';
+                    if (deptA !== deptB) return deptA.localeCompare(deptB);
+                    return a.name.localeCompare(b.name);
+                } else if (sortMode === 'handicap_desc') {
+                    if (a.handicap !== b.handicap) return b.handicap - a.handicap;
                     return a.name.localeCompare(b.name);
                 } else {
-                    // 기본(등급순)
-                    let orderA = typeOrder[a.type] || 4;
-                    let orderB = typeOrder[b.type] || 4;
-                    if (orderA !== orderB) return orderA - orderB;
+                    // handicap_asc (기본)
                     if (a.handicap !== b.handicap) return a.handicap - b.handicap;
                     return a.name.localeCompare(b.name);
                 }
             });
 
             const activeCount = filteredMembers.filter(m => m.status !== 'inactive').length;
-            document.getElementById('total-members-count').innerText = val ? `필터링 ${filteredMembers.length}명 (활동 ${activeCount}명)` : `총 ${members.length}명 (활동 ${activeCount}명)`;
+            document.getElementById('total-members-count').innerText = `총 ${filteredMembers.length}명 (활동 ${activeCount}명)`;
 
             list.innerHTML = '';
             if (filteredMembers.length === 0) {
@@ -3726,12 +3777,10 @@
                 const inactiveClass = m.status === 'inactive' ? 'member-inactive' : '';
                 const badge = m.status === 'inactive' ? `<span class="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-extrabold ml-1 border border-red-100">휴면</span>` : '';
                 let phoneStr = m.phone ? escapeHTML(m.phone) : '미입력';
-                let deptStr = m.dept ? escapeHTML(m.dept) : '-';
-                let dutyStr = m.duty ? escapeHTML(m.duty) : '-';
-                let rankStr = m.rank ? escapeHTML(m.rank) : '-';
                 let typeStr = m.type ? escapeHTML(m.type) : '-';
                 let genderStr = m.gender ? escapeHTML(m.gender) : '-';
-                let detailsHtml = `<div id="member-info-${m.id}" class="hidden animate-fade-in mt-3 pt-3 border-t border-slate-100 w-full"><div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/50"><div class="grid grid-cols-2 gap-3 text-[11px]"><div><span class="block text-slate-400 font-bold mb-0.5">📞 연락처</span><span class="font-extrabold text-slate-700">${phoneStr}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">🏢 구분/부서</span><span class="font-extrabold text-slate-700">${escapeHTML(m.affiliation)} ${m.dept ? '> ' + escapeHTML(m.dept) : ''}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">💼 직급/직책</span><span class="font-extrabold text-slate-700">${rankStr}${m.duty ? ' (' + escapeHTML(m.duty) + ')' : ''}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">🏷️ 등급/성별</span><span class="font-extrabold text-slate-700">${typeStr} / ${genderStr}</span></div></div></div></div>`;
+                let styleStr = m.grip || m.playStyle || '-';
+                let detailsHtml = `<div id="member-info-${m.id}" class="hidden animate-fade-in mt-3 pt-3 border-t border-slate-100 w-full"><div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/50"><div class="grid grid-cols-2 gap-3 text-[11px]"><div><span class="block text-slate-400 font-bold mb-0.5">📞 연락처</span><span class="font-extrabold text-slate-700">${phoneStr}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">🏢 구분/부서</span><span class="font-extrabold text-slate-700">${escapeHTML(m.affiliation)} ${m.dept ? '> ' + escapeHTML(m.dept) : ''}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">💼 전형/성별</span><span class="font-extrabold text-slate-700">${styleStr} / ${genderStr}</span></div><div><span class="block text-slate-400 font-bold mb-0.5">🏷️ 등급</span><span class="font-extrabold text-slate-700">${typeStr}</span></div></div></div></div>`;
                 list.innerHTML += `<li class="flex flex-col p-3.5 ${inactiveClass} hover:bg-slate-50 transition-colors border-b border-slate-50 cursor-pointer" onclick="toggleMemberInfo(${m.id})"><div class="flex justify-between items-center gap-3 flex-wrap sm:flex-nowrap w-full"><div class="flex items-center gap-3 flex-1">${photoHtml}<div><div class="flex items-center gap-1.5">${dutyIcon}<span class="font-extrabold ${nameColorClass} text-[13px]">${escapeHTML(m.name)}</span> <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">${m.handicap}부</span>${badge}</div><div class="text-[11px] text-slate-400 mt-1 font-medium">${infoStr}</div></div></div>${adminButtons}</div>${detailsHtml}</li>`;
             });
         }
