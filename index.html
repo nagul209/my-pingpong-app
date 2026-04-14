@@ -3275,7 +3275,34 @@
         function initFormState() { for (let key in formState) if (key !== 'opAttend') formState[key] = []; updateFormUI(); }
         function updateFormUI() { for (let key in formState) { const el = document.getElementById(`ui-box-${key}`); if (!el) continue; if ((formState[key] || []).length === 0) { let emptyMsg = (key === 'attend' || key === 'opAttend') ? '👇 버튼을 눌러 명단을 선택하세요' : (key === 'lazy' ? '해당자 없음' : '선택'); el.innerHTML = `<span class="name-chip-empty ${key === 'lazy' ? 'text-red-300' : ''}">${emptyMsg}</span>`; } else el.innerHTML = formState[key].map(name => `<span class="name-chip shadow-sm">${escapeHTML(name)}</span>`).join(''); } }
 
-        function downloadExcelTemplate() { try { const ws_data = [['구분', '부서', '등급', '직책', '직급', '이름(*필수)', '부수(*필수,숫자)', '성별', '상태(활동/휴면)', '연락처', '주주손', '전형', '그립', '전면러버', '후면러버', '주요서브'], ['시', '체육진흥과', '연회원', '총무', '주무관', '홍길동', '5', '남', '활동', '010-0000-0000', '오른손', '드라이브', '셰이크핸드', '평면', '평면', '일반/미지정']]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), "회원등록양식"); XLSX.writeFile(wb, "탁구리그_회원일괄등록_양식.xlsx"); } catch (e) { alert("다운로드 실패"); } }
+        function downloadExcelTemplate() {
+            try {
+                const ws_data = [
+                    ['소속', '이름', '부수', '성별', '주사용손', '전형', '그립', '전면러버', '후면러버', '주력서브', '상태', '연락처'],
+                    ['청라탁구', '홍길동', '5부', '남성', '오른손', '드라이브', '셰이크핸드', '평면', '평면', '일반/미지정', '활동', '010-0000-0000']
+                ];
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                XLSX.utils.book_append_sheet(wb, ws, "회원등록양식");
+                
+                // 선택 가능 목록 안내 시트 추가
+                const help_data = [
+                    ['항목', '입력 가능한 값 (아래 문구 중 하나를 그대로 입력하세요)'],
+                    ['소속', '청라탁구, 인천시청, 핑퐁조아, 서구청, 기타'],
+                    ['부수', '선수, 1부, 2부, 3부, 4부, 5부, 6부, 7부, 통합8부, 통합9부, 통합10부, 희망부'],
+                    ['성별', '남성, 여성'],
+                    ['주사용손', '오른손, 왼손'],
+                    ['전형', '드라이브, 전진속공, 올라운드, 수비, 이질러버'],
+                    ['그립', '셰이크핸드, 일본식 펜홀더, 중국식 펜홀더'],
+                    ['전면/후면러버', '평면, 숏핌플, 롱핌플, 미디엄핌플'],
+                    ['주력서브', '일반/미지정, 회전/횡서브, 커트서브, 훅서브, YG서브, 빠른 롱서브'],
+                    ['상태', '활동, 휴면']
+                ];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(help_data), "목록선택안내");
+                
+                XLSX.writeFile(wb, "탁구리그_회원일괄등록_양식.xlsx");
+            } catch (e) { alert("다운로드 실패"); }
+        }
 
         function handleExcelUpload(event) {
             const file = event.target.files[0];
@@ -3289,65 +3316,73 @@
                     if (jsonData.length < 2) throw new Error("데이터가 없습니다.");
 
                     const headers = jsonData[0].map(h => String(h).trim());
-                    const idxName = headers.findIndex(h => h.includes('이름')) > -1 ? headers.findIndex(h => h.includes('이름')) : 5;
-                    const idxHandi = headers.findIndex(h => h.includes('부수')) > -1 ? headers.findIndex(h => h.includes('부수')) : 6;
-                    const idxAffil = headers.findIndex(h => h.includes('구분')) > -1 ? headers.findIndex(h => h.includes('구분')) : 0;
-                    const idxDept = headers.findIndex(h => h.includes('부서')) > -1 ? headers.findIndex(h => h.includes('부서')) : 1;
-                    const idxType = headers.findIndex(h => h.includes('등급')) > -1 ? headers.findIndex(h => h.includes('등급')) : 2;
-                    const idxDuty = headers.findIndex(h => h.includes('직책')) > -1 ? headers.findIndex(h => h.includes('직책')) : 3;
-                    const idxRank = headers.findIndex(h => h.includes('직급')) > -1 ? headers.findIndex(h => h.includes('직급')) : 4;
-                    const idxGender = headers.findIndex(h => h.includes('성별')) > -1 ? headers.findIndex(h => h.includes('성별')) : 7;
-                    const idxStatus = headers.findIndex(h => h.includes('상태')) > -1 ? headers.findIndex(h => h.includes('상태')) : 8;
-                    const idxPhone = headers.findIndex(h => h.includes('연락처')) > -1 ? headers.findIndex(h => h.includes('연락처')) : 9;
-                    const idxDominantHand = headers.findIndex(h => h.includes('주주손')) > -1 ? headers.findIndex(h => h.includes('주주손')) : -1;
-                    const idxPlayStyle = headers.findIndex(h => h.includes('전형')) > -1 ? headers.findIndex(h => h.includes('전형')) : -1;
-                    const idxGrip = headers.findIndex(h => h.includes('그립')) > -1 ? headers.findIndex(h => h.includes('그립')) : -1;
-                    const idxFrontRubber = headers.findIndex(h => h.includes('전면러버')) > -1 ? headers.findIndex(h => h.includes('전면러버')) : -1;
-                    const idxBackRubber = headers.findIndex(h => h.includes('후면러버')) > -1 ? headers.findIndex(h => h.includes('후면러버')) : -1;
-                    const idxMainServe = headers.findIndex(h => h.includes('주요서브')) > -1 ? headers.findIndex(h => h.includes('주요서브')) : -1;
+                    const getIdx = (queries) => {
+                        for (let q of queries) {
+                            const idx = headers.findIndex(h => h.includes(q));
+                            if (idx > -1) return idx;
+                        }
+                        return -1;
+                    };
+
+                    const idxName = getIdx(['이름']);
+                    const idxHandi = getIdx(['부수']);
+                    const idxAffil = getIdx(['구분']); // 이전 양식 호환
+                    const idxDept = getIdx(['소속', '부서']);
+                    const idxType = getIdx(['등급']);
+                    const idxDuty = getIdx(['직책']);
+                    const idxRank = getIdx(['직급']);
+                    const idxGender = getIdx(['성별']);
+                    const idxStatus = getIdx(['상태']);
+                    const idxPhone = getIdx(['연락처']);
+                    const idxDominantHand = getIdx(['주사용손', '주주손']);
+                    const idxPlayStyle = getIdx(['전형']);
+                    const idxGrip = getIdx(['그립']);
+                    const idxFrontRubber = getIdx(['전면러버']);
+                    const idxBackRubber = getIdx(['후면러버']);
+                    const idxMainServe = getIdx(['주력서브', '주요서브']);
 
                     let addedCount = 0;
                     for (let i = 1; i < jsonData.length; i++) {
                         const row = jsonData[i];
                         if (!row || row.length === 0) continue;
                         const name = String(row[idxName] || '').trim();
-                        const handicapStrRaw = String(row[idxHandi] || '').trim();
-                        if (name !== '' && handicapStrRaw !== '') {
-                            let rawStatus = String(row[idxStatus] || '').trim();
-                            let statusVal = (rawStatus === '휴면' || rawStatus === 'inactive') ? 'inactive' : 'active';
-                            
-                            let hNum = parseInt(handicapStrRaw.replace(/[^0-9]/g, '')) || 5;
-                            if (handicapStrRaw.includes('선수')) hNum = 0;
-                            if (handicapStrRaw.includes('희망')) hNum = 11;
-                            let hStr = hNum === 0 ? '선수' : (hNum === 11 ? '희망부' : hNum + '부');
+                        if (name === '') continue;
 
-                            members.push({
-                                id: nextMemberId++,
-                                affiliation: String(row[idxAffil] || '시').trim(),
-                                dept: String(row[idxDept] || '').trim(),
-                                type: String(row[idxType] || '연회원').trim(),
-                                duty: String(row[idxDuty] || '').trim(),
-                                rank: String(row[idxRank] || '').trim(),
-                                name: name,
-                                handicap: hNum,
-                                handicapStr: hStr,
-                                gender: String(row[idxGender] || '남성').trim(),
-                                dominantHand: idxDominantHand > -1 ? String(row[idxDominantHand] || '오른손').trim() : '오른손',
-                                playStyle: idxPlayStyle > -1 ? String(row[idxPlayStyle] || '드라이브').trim() : '드라이브',
-                                grip: idxGrip > -1 ? String(row[idxGrip] || '셰이크핸드').trim() : '셰이크핸드',
-                                frontRubber: idxFrontRubber > -1 ? String(row[idxFrontRubber] || '평면').trim() : '평면',
-                                backRubber: idxBackRubber > -1 ? String(row[idxBackRubber] || '평면').trim() : '평면',
-                                mainServe: idxMainServe > -1 ? String(row[idxMainServe] || '일반/미지정').trim() : '일반/미지정',
-                                status: statusVal,
-                                phone: String(row[idxPhone] || '').trim(),
-                                photo: '',
-                                score: 0.0,
-                                prevRank: members.length + 1
-                            });
-                            addedCount++;
-                        }
+                        const handicapStrRaw = String(row[idxHandi] || '').trim();
+                        let rawStatus = String(row[idxStatus] || '').trim();
+                        let statusVal = (rawStatus === '휴면' || rawStatus === 'inactive') ? 'inactive' : 'active';
+                        
+                        let hNum = parseInt(handicapStrRaw.replace(/[^0-9]/g, '')) || 5;
+                        if (handicapStrRaw.includes('선수')) hNum = 0;
+                        if (handicapStrRaw.includes('희망')) hNum = 11;
+                        let hStr = hNum === 0 ? '선수' : (hNum === 11 ? '희망부' : hNum + '부');
+
+                        members.push({
+                            id: nextMemberId++,
+                            affiliation: idxAffil > -1 ? String(row[idxAffil] || '청라탁구').trim() : (idxDept > -1 ? String(row[idxDept] || '청라탁구').trim() : '청라탁구'),
+                            dept: idxDept > -1 ? String(row[idxDept] || '').trim() : '',
+                            type: idxType > -1 ? String(row[idxType] || '연회원').trim() : '연회원',
+                            duty: idxDuty > -1 ? String(row[idxDuty] || '').trim() : '',
+                            rank: idxRank > -1 ? String(row[idxRank] || '').trim() : '',
+                            name: name,
+                            handicap: hNum,
+                            handicapStr: hStr,
+                            gender: idxGender > -1 ? String(row[idxGender] || '남성').trim() : '남성',
+                            dominantHand: idxDominantHand > -1 ? String(row[idxDominantHand] || '오른손').trim() : '오른손',
+                            playStyle: idxPlayStyle > -1 ? String(row[idxPlayStyle] || '드라이브').trim() : '드라이브',
+                            grip: idxGrip > -1 ? String(row[idxGrip] || '셰이크핸드').trim() : '셰이크핸드',
+                            frontRubber: idxFrontRubber > -1 ? String(row[idxFrontRubber] || '평면').trim() : '평면',
+                            backRubber: idxBackRubber > -1 ? String(row[idxBackRubber] || '평면').trim() : '평면',
+                            mainServe: idxMainServe > -1 ? String(row[idxMainServe] || '일반/미지정').trim() : '일반/미지정',
+                            status: statusVal,
+                            phone: idxPhone > -1 ? String(row[idxPhone] || '').trim() : '',
+                            photo: '',
+                            score: 0.0,
+                            prevRank: members.length + 1
+                        });
+                        addedCount++;
                     }
-                    if (addedCount > 0) { alert(`${addedCount}명 업로드 됨`); saveDataToStorage(); } else { alert("유효한 데이터 없음"); }
+                    if (addedCount > 0) { alert(`${addedCount}명 업로드 됨`); saveDataToStorage(); renderMembersList(); } else { alert("유효한 데이터 없음"); }
                 } catch (err) { alert("오류 발생: 올바른 양식인지 확인해주세요."); }
                 document.getElementById('excel-upload').value = "";
             };
