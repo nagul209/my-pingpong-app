@@ -1389,13 +1389,13 @@
             class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative admin-only btn-press"><span
                 class="tab-icon">🎮</span><span class="mt-1">운영</span></button>
         <button onclick="switchTab('input')" id="btn-input"
-            class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative admin-only btn-press"><span
+            class="tab-item flex-1 flex-col items-center justify-center py-2 relative admin-only btn-press"><span
                 class="tab-icon">📝</span><span class="mt-1">입력</span></button>
         <button onclick="switchTab('member')" id="btn-member"
-            class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative admin-only btn-press"><span
+            class="tab-item flex-1 flex-col items-center justify-center py-2 relative admin-only btn-press"><span
                 class="tab-icon">👥</span><span class="mt-1">회원</span></button>
         <button onclick="switchTab('setting')" id="btn-setting"
-            class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative admin-only btn-press"><span
+            class="tab-item flex-1 flex-col items-center justify-center py-2 relative admin-only btn-press"><span
                 class="tab-icon">⚙️</span><span class="mt-1">설정</span></button>
     </div>
 
@@ -1571,7 +1571,6 @@
         }
         function getCurrentTab() { return ['history', 'input', 'member', 'setting', 'operation', 'member-public'].find(t => document.getElementById(`btn-${t}`).classList.contains('tab-active')); }
         function switchTab(tabName) {
-            console.log('Switching to tab:', tabName);
             ['history', 'input', 'member', 'setting', 'operation', 'member-public'].forEach(name => {
                 const viewEl = document.getElementById(`view-${name}`);
                 const btnEl = document.getElementById(`btn-${name}`);
@@ -1583,22 +1582,15 @@
                     if (btnEl) btnEl.classList.add('tab-active');
                 }
             });
-
-            try {
-                if (tabName === 'member-public') {
-                    updateAllFilterOptions();
-                    renderMemberPublicList();
-                }
-                if (tabName === 'member') {
-                    updateAllFilterOptions();
-                    renderMembersList();
-                }
-                if (tabName === 'input' && !editingMatchId) cancelInputStep2();
-                if (tabName === 'member' && editingMemberId) cancelEdit();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (e) {
-                console.error('Error switching tab:', e);
+            if (tabName === 'member-public') {
+                updateAllFilterOptions();
+                renderMemberPublicList();
             }
+            if (tabName === 'member') {
+                updateAllFilterOptions();
+                renderMembersList();
+            }
+            if (tabName === 'input' && !editingMatchId) cancelInputStep2(); if (tabName === 'member' && editingMemberId) cancelEdit(); window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // ==============================================================================
@@ -3586,33 +3578,29 @@
                 
                 if (!deptSelect || !handicapSelect || !styleSelect) return;
 
-                try {
-                    // 소속 옵션
-                    const depts = [...new Set(members.map(m => m.dept).filter(Boolean))].sort();
-                    const currentDept = deptSelect.value;
-                    deptSelect.innerHTML = '<option value="">전체 소속</option>' + 
-                        depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
-                    deptSelect.value = depts.includes(currentDept) ? currentDept : "";
+                // 소속 옵션
+                const depts = [...new Set(members.map(m => m.dept).filter(Boolean))].sort();
+                const currentDept = deptSelect.value;
+                deptSelect.innerHTML = '<option value="">전체 소속</option>' + 
+                    depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+                deptSelect.value = depts.includes(currentDept) ? currentDept : "";
 
-                    // 부수 옵션
-                    const handicaps = [...new Set(members.map(m => m.handicap).filter(h => h !== undefined))].sort((a, b) => a - b);
-                    const currentHandicap = handicapSelect.value;
-                    handicapSelect.innerHTML = '<option value="">전체 부수</option>' + 
-                        handicaps.map(h => `<option value="${h}">${h}부</option>`).join('');
-                    handicapSelect.value = handicaps.some(h => String(h) === currentHandicap) ? currentHandicap : "";
+                // 부수 옵션
+                const handicaps = [...new Set(members.map(m => m.handicap).filter(h => h !== undefined))].sort((a, b) => a - b);
+                const currentHandicap = handicapSelect.value;
+                handicapSelect.innerHTML = '<option value="">전체 부수</option>' + 
+                    handicaps.map(h => `<option value="${h}">${h}부</option>`).join('');
+                handicapSelect.value = handicaps.some(h => String(h) === currentHandicap) ? currentHandicap : "";
 
-                    // 전형 옵션
-                    const styles = [...new Set([
-                        ...members.map(m => m.grip).filter(Boolean),
-                        ...members.map(m => m.playStyle).filter(Boolean)
-                    ])].sort();
-                    const currentStyle = styleSelect.value;
-                    styleSelect.innerHTML = '<option value="">전체 전형</option>' + 
-                        styles.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
-                    styleSelect.value = styles.includes(currentStyle) ? currentStyle : "";
-                } catch (e) {
-                    console.error('Error updating filter options for:', ids, e);
-                }
+                // 전형 옵션
+                const styles = [...new Set([
+                    ...members.map(m => m.grip).filter(Boolean),
+                    ...members.map(m => m.playStyle).filter(Boolean)
+                ])].sort();
+                const currentStyle = styleSelect.value;
+                styleSelect.innerHTML = '<option value="">전체 전형</option>' + 
+                    styles.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
+                styleSelect.value = styles.includes(currentStyle) ? currentStyle : "";
             });
         }
 
