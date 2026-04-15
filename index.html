@@ -260,7 +260,50 @@
 
     <div class="relative z-30 mt-4 px-4">
 
+        <div id="view-ranking" class="animate-fade-in">
+            <div class="flex justify-between items-center mb-3 px-1 gap-2">
+                <select id="season-selector"
+                    class="flex-1 text-[12px] font-extrabold text-indigo-800 bg-white border-2 border-indigo-100 rounded-xl px-2.5 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none truncate"
+                    onchange="renderRanking()">
+                    <option value="current">📍 현재 진행중인 시즌</option>
+                </select>
+                <button onclick="copyRankingImage()" id="btn-capture-ranking"
+                    class="text-[11px] bg-indigo-500 text-white px-3 py-1.5 rounded-xl border border-indigo-600 hover:bg-indigo-600 font-extrabold btn-press shadow-sm flex items-center gap-1 shrink-0">
+                    📸 순위표 이미지로 복사
+                </button>
+                <button onclick="downloadRankingExcel()"
+                    class="text-[11px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 font-extrabold btn-press shadow-sm flex items-center gap-1 shrink-0">
+                    📊 엑셀 저장
+                </button>
 
+            </div>
+            <div class="mb-2 px-1 text-right">
+                <span id="ranking-instruction"
+                    class="text-[11px] text-indigo-600 font-bold bg-white/80 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-indigo-100 shadow-sm transition-all">👆
+                    이름을 터치하면 상세기록</span>
+            </div>
+
+            <div id="ranking-card"
+                class="shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 rounded-2xl bg-white overflow-hidden mb-2">
+                <table class="w-full text-sm text-left text-slate-700">
+                    <thead
+                        class="text-[10px] text-slate-400 uppercase bg-slate-50/80 border-b border-slate-100 font-bold tracking-wider">
+                        <tr>
+                            <th class="px-1 py-3 text-center w-8">순위</th>
+                            <th class="px-1 py-3 text-left w-14">선수명</th>
+                            <th class="px-1 py-3 text-center w-8">출석</th>
+                            <th class="px-1 py-3 text-center w-6">🥇</th>
+                            <th class="px-1 py-3 text-center w-6">🥈</th>
+                            <th class="px-1 py-3 text-center w-6">🥉</th>
+                            <th class="px-1 py-3 text-right w-10">총점</th>
+                            <th class="px-1 py-3 text-center w-10">변동</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-table-body" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <p class="text-[10px] text-slate-400 text-right px-2 mb-6">※ 순위는 <b>연회원</b> 등급만 산정됩니다. 0점 회원은 숨겨집니다.</p>
+        </div>
 
         <div id="view-operation" class="hidden animate-fade-in pb-10">
             <div
@@ -1379,8 +1422,11 @@
 
     <div class="fixed bottom-0 w-full border-t border-slate-200/50 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.08)] glass-panel z-50 px-3 py-2 pb-5 flex justify-between items-center text-[10px] text-slate-400 font-medium no-print transition-all duration-300 max-w-md mx-auto left-0 right-0"
         id="bottom-tab-bar">
-        <button onclick="switchTab('history')" id="btn-history"
+        <button onclick="switchTab('ranking')" id="btn-ranking"
             class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative tab-active btn-press"><span
+                class="tab-icon">🏆</span><span class="mt-1">순위</span></button>
+        <button onclick="switchTab('history')" id="btn-history"
+            class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative btn-press"><span
                 class="tab-icon">📅</span><span class="mt-1">기록</span></button>
         <button onclick="switchTab('member-public')" id="btn-member-public"
             class="tab-item flex-1 flex flex-col items-center justify-center py-2 relative btn-press"><span
@@ -1452,7 +1498,7 @@
         function getRoundRobinPairs(n) { return ROUND_ROBIN_ORDERS[n] || []; }
 
         let isAdmin = false; let editingMatchId = null; let editingMemberId = null; let currentPhotoBase64 = "";
-        let defaultAppConfig = { password: "0000", defaultTab: "history", announcePrefix: "🏓 [ {date} {type} 결과 ]\n\n", announceSuffix: "\n모두 수고하셨습니다! 다음 모임에서 뵙겠습니다. 👏", pastSeasons: [] };
+        let defaultAppConfig = { password: "0000", defaultTab: "ranking", announcePrefix: "🏓 [ {date} {type} 결과 ]\n\n", announceSuffix: "\n모두 수고하셨습니다! 다음 모임에서 뵙겠습니다. 👏", pastSeasons: [] };
         // 수정됨: db3 변수 추가
 
 
@@ -1565,13 +1611,13 @@
         }
 
         function toggleAdmin() {
-            if (isAdmin) { isAdmin = false; sessionStorage.removeItem('isAdminLoggedIn'); document.getElementById('app-body').classList.remove('admin-mode-active'); document.getElementById('btn-admin-lock').innerText = "🔒"; if (!['history'].includes(getCurrentTab())) switchTab('history'); }
+            if (isAdmin) { isAdmin = false; sessionStorage.removeItem('isAdminLoggedIn'); document.getElementById('app-body').classList.remove('admin-mode-active'); document.getElementById('btn-admin-lock').innerText = "🔒"; if (!['ranking', 'history'].includes(getCurrentTab())) switchTab('ranking'); }
             else { const pw = prompt("관리자 비밀번호를 입력하세요.\n(기본: 0000)"); if (pw === appConfig.password) { isAdmin = true; sessionStorage.setItem('isAdminLoggedIn', 'true'); document.getElementById('app-body').classList.add('admin-mode-active'); document.getElementById('btn-admin-lock').innerText = "🔓"; loadSettingsUI(); } else if (pw !== null) alert("비밀번호가 틀렸습니다."); }
             renderAll();
         }
-        function getCurrentTab() { return ['history', 'input', 'member', 'setting', 'operation', 'member-public'].find(t => document.getElementById(`btn-${t}`).classList.contains('tab-active')); }
+        function getCurrentTab() { return ['ranking', 'input', 'history', 'member', 'setting', 'operation', 'member-public'].find(t => document.getElementById(`btn-${t}`).classList.contains('tab-active')); }
         function switchTab(tabName) {
-            ['history', 'input', 'member', 'setting', 'operation', 'member-public'].forEach(name => {
+            ['ranking', 'input', 'history', 'member', 'setting', 'operation', 'member-public'].forEach(name => {
                 const viewEl = document.getElementById(`view-${name}`);
                 const btnEl = document.getElementById(`btn-${name}`);
                 if (viewEl) viewEl.classList.add('hidden');
@@ -3229,34 +3275,7 @@
         function initFormState() { for (let key in formState) if (key !== 'opAttend') formState[key] = []; updateFormUI(); }
         function updateFormUI() { for (let key in formState) { const el = document.getElementById(`ui-box-${key}`); if (!el) continue; if ((formState[key] || []).length === 0) { let emptyMsg = (key === 'attend' || key === 'opAttend') ? '👇 버튼을 눌러 명단을 선택하세요' : (key === 'lazy' ? '해당자 없음' : '선택'); el.innerHTML = `<span class="name-chip-empty ${key === 'lazy' ? 'text-red-300' : ''}">${emptyMsg}</span>`; } else el.innerHTML = formState[key].map(name => `<span class="name-chip shadow-sm">${escapeHTML(name)}</span>`).join(''); } }
 
-        function downloadExcelTemplate() {
-            try {
-                const ws_data = [
-                    ['소속', '이름', '부수', '성별', '주사용손', '전형', '그립', '전면러버', '후면러버', '주력서브', '상태', '연락처'],
-                    ['청라탁구', '홍길동', '5부', '남성', '오른손', '드라이브', '셰이크핸드', '평면', '평면', '일반/미지정', '활동', '010-0000-0000']
-                ];
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                XLSX.utils.book_append_sheet(wb, ws, "회원등록양식");
-                
-                // 선택 가능 목록 안내 시트 추가
-                const help_data = [
-                    ['항목', '입력 가능한 값 (아래 문구 중 하나를 그대로 입력하세요)'],
-                    ['소속', '청라탁구, 인천시청, 핑퐁조아, 서구청, 기타'],
-                    ['부수', '선수, 1부, 2부, 3부, 4부, 5부, 6부, 7부, 통합8부, 통합9부, 통합10부, 희망부'],
-                    ['성별', '남성, 여성'],
-                    ['주사용손', '오른손, 왼손'],
-                    ['전형', '드라이브, 전진속공, 올라운드, 수비, 이질러버'],
-                    ['그립', '셰이크핸드, 일본식 펜홀더, 중국식 펜홀더'],
-                    ['전면/후면러버', '평면, 숏핌플, 롱핌플, 미디엄핌플'],
-                    ['주력서브', '일반/미지정, 회전/횡서브, 커트서브, 훅서브, YG서브, 빠른 롱서브'],
-                    ['상태', '활동, 휴면']
-                ];
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(help_data), "목록선택안내");
-                
-                XLSX.writeFile(wb, "탁구리그_회원일괄등록_양식.xlsx");
-            } catch (e) { alert("다운로드 실패"); }
-        }
+        function downloadExcelTemplate() { try { const ws_data = [['구분', '부서', '등급', '직책', '직급', '이름(*필수)', '부수(*필수,숫자)', '성별', '상태(활동/휴면)', '연락처', '주주손', '전형', '그립', '전면러버', '후면러버', '주요서브'], ['시', '체육진흥과', '연회원', '총무', '주무관', '홍길동', '5', '남', '활동', '010-0000-0000', '오른손', '드라이브', '셰이크핸드', '평면', '평면', '일반/미지정']]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), "회원등록양식"); XLSX.writeFile(wb, "탁구리그_회원일괄등록_양식.xlsx"); } catch (e) { alert("다운로드 실패"); } }
 
         function handleExcelUpload(event) {
             const file = event.target.files[0];
@@ -3270,73 +3289,65 @@
                     if (jsonData.length < 2) throw new Error("데이터가 없습니다.");
 
                     const headers = jsonData[0].map(h => String(h).trim());
-                    const getIdx = (queries) => {
-                        for (let q of queries) {
-                            const idx = headers.findIndex(h => h.includes(q));
-                            if (idx > -1) return idx;
-                        }
-                        return -1;
-                    };
-
-                    const idxName = getIdx(['이름']);
-                    const idxHandi = getIdx(['부수']);
-                    const idxAffil = getIdx(['구분']); // 이전 양식 호환
-                    const idxDept = getIdx(['소속', '부서']);
-                    const idxType = getIdx(['등급']);
-                    const idxDuty = getIdx(['직책']);
-                    const idxRank = getIdx(['직급']);
-                    const idxGender = getIdx(['성별']);
-                    const idxStatus = getIdx(['상태']);
-                    const idxPhone = getIdx(['연락처']);
-                    const idxDominantHand = getIdx(['주사용손', '주주손']);
-                    const idxPlayStyle = getIdx(['전형']);
-                    const idxGrip = getIdx(['그립']);
-                    const idxFrontRubber = getIdx(['전면러버']);
-                    const idxBackRubber = getIdx(['후면러버']);
-                    const idxMainServe = getIdx(['주력서브', '주요서브']);
+                    const idxName = headers.findIndex(h => h.includes('이름')) > -1 ? headers.findIndex(h => h.includes('이름')) : 5;
+                    const idxHandi = headers.findIndex(h => h.includes('부수')) > -1 ? headers.findIndex(h => h.includes('부수')) : 6;
+                    const idxAffil = headers.findIndex(h => h.includes('구분')) > -1 ? headers.findIndex(h => h.includes('구분')) : 0;
+                    const idxDept = headers.findIndex(h => h.includes('부서')) > -1 ? headers.findIndex(h => h.includes('부서')) : 1;
+                    const idxType = headers.findIndex(h => h.includes('등급')) > -1 ? headers.findIndex(h => h.includes('등급')) : 2;
+                    const idxDuty = headers.findIndex(h => h.includes('직책')) > -1 ? headers.findIndex(h => h.includes('직책')) : 3;
+                    const idxRank = headers.findIndex(h => h.includes('직급')) > -1 ? headers.findIndex(h => h.includes('직급')) : 4;
+                    const idxGender = headers.findIndex(h => h.includes('성별')) > -1 ? headers.findIndex(h => h.includes('성별')) : 7;
+                    const idxStatus = headers.findIndex(h => h.includes('상태')) > -1 ? headers.findIndex(h => h.includes('상태')) : 8;
+                    const idxPhone = headers.findIndex(h => h.includes('연락처')) > -1 ? headers.findIndex(h => h.includes('연락처')) : 9;
+                    const idxDominantHand = headers.findIndex(h => h.includes('주주손')) > -1 ? headers.findIndex(h => h.includes('주주손')) : -1;
+                    const idxPlayStyle = headers.findIndex(h => h.includes('전형')) > -1 ? headers.findIndex(h => h.includes('전형')) : -1;
+                    const idxGrip = headers.findIndex(h => h.includes('그립')) > -1 ? headers.findIndex(h => h.includes('그립')) : -1;
+                    const idxFrontRubber = headers.findIndex(h => h.includes('전면러버')) > -1 ? headers.findIndex(h => h.includes('전면러버')) : -1;
+                    const idxBackRubber = headers.findIndex(h => h.includes('후면러버')) > -1 ? headers.findIndex(h => h.includes('후면러버')) : -1;
+                    const idxMainServe = headers.findIndex(h => h.includes('주요서브')) > -1 ? headers.findIndex(h => h.includes('주요서브')) : -1;
 
                     let addedCount = 0;
                     for (let i = 1; i < jsonData.length; i++) {
                         const row = jsonData[i];
                         if (!row || row.length === 0) continue;
                         const name = String(row[idxName] || '').trim();
-                        if (name === '') continue;
-
                         const handicapStrRaw = String(row[idxHandi] || '').trim();
-                        let rawStatus = String(row[idxStatus] || '').trim();
-                        let statusVal = (rawStatus === '휴면' || rawStatus === 'inactive') ? 'inactive' : 'active';
-                        
-                        let hNum = parseInt(handicapStrRaw.replace(/[^0-9]/g, '')) || 5;
-                        if (handicapStrRaw.includes('선수')) hNum = 0;
-                        if (handicapStrRaw.includes('희망')) hNum = 11;
-                        let hStr = hNum === 0 ? '선수' : (hNum === 11 ? '희망부' : hNum + '부');
+                        if (name !== '' && handicapStrRaw !== '') {
+                            let rawStatus = String(row[idxStatus] || '').trim();
+                            let statusVal = (rawStatus === '휴면' || rawStatus === 'inactive') ? 'inactive' : 'active';
+                            
+                            let hNum = parseInt(handicapStrRaw.replace(/[^0-9]/g, '')) || 5;
+                            if (handicapStrRaw.includes('선수')) hNum = 0;
+                            if (handicapStrRaw.includes('희망')) hNum = 11;
+                            let hStr = hNum === 0 ? '선수' : (hNum === 11 ? '희망부' : hNum + '부');
 
-                        members.push({
-                            id: nextMemberId++,
-                            affiliation: idxAffil > -1 ? String(row[idxAffil] || '청라탁구').trim() : (idxDept > -1 ? String(row[idxDept] || '청라탁구').trim() : '청라탁구'),
-                            dept: idxDept > -1 ? String(row[idxDept] || '').trim() : '',
-                            type: idxType > -1 ? String(row[idxType] || '연회원').trim() : '연회원',
-                            duty: idxDuty > -1 ? String(row[idxDuty] || '').trim() : '',
-                            rank: idxRank > -1 ? String(row[idxRank] || '').trim() : '',
-                            name: name,
-                            handicap: hNum,
-                            handicapStr: hStr,
-                            gender: idxGender > -1 ? String(row[idxGender] || '남성').trim() : '남성',
-                            dominantHand: idxDominantHand > -1 ? String(row[idxDominantHand] || '오른손').trim() : '오른손',
-                            playStyle: idxPlayStyle > -1 ? String(row[idxPlayStyle] || '드라이브').trim() : '드라이브',
-                            grip: idxGrip > -1 ? String(row[idxGrip] || '셰이크핸드').trim() : '셰이크핸드',
-                            frontRubber: idxFrontRubber > -1 ? String(row[idxFrontRubber] || '평면').trim() : '평면',
-                            backRubber: idxBackRubber > -1 ? String(row[idxBackRubber] || '평면').trim() : '평면',
-                            mainServe: idxMainServe > -1 ? String(row[idxMainServe] || '일반/미지정').trim() : '일반/미지정',
-                            status: statusVal,
-                            phone: idxPhone > -1 ? String(row[idxPhone] || '').trim() : '',
-                            photo: '',
-                            score: 0.0,
-                            prevRank: members.length + 1
-                        });
-                        addedCount++;
+                            members.push({
+                                id: nextMemberId++,
+                                affiliation: String(row[idxAffil] || '시').trim(),
+                                dept: String(row[idxDept] || '').trim(),
+                                type: String(row[idxType] || '연회원').trim(),
+                                duty: String(row[idxDuty] || '').trim(),
+                                rank: String(row[idxRank] || '').trim(),
+                                name: name,
+                                handicap: hNum,
+                                handicapStr: hStr,
+                                gender: String(row[idxGender] || '남성').trim(),
+                                dominantHand: idxDominantHand > -1 ? String(row[idxDominantHand] || '오른손').trim() : '오른손',
+                                playStyle: idxPlayStyle > -1 ? String(row[idxPlayStyle] || '드라이브').trim() : '드라이브',
+                                grip: idxGrip > -1 ? String(row[idxGrip] || '셰이크핸드').trim() : '셰이크핸드',
+                                frontRubber: idxFrontRubber > -1 ? String(row[idxFrontRubber] || '평면').trim() : '평면',
+                                backRubber: idxBackRubber > -1 ? String(row[idxBackRubber] || '평면').trim() : '평면',
+                                mainServe: idxMainServe > -1 ? String(row[idxMainServe] || '일반/미지정').trim() : '일반/미지정',
+                                status: statusVal,
+                                phone: String(row[idxPhone] || '').trim(),
+                                photo: '',
+                                score: 0.0,
+                                prevRank: members.length + 1
+                            });
+                            addedCount++;
+                        }
                     }
-                    if (addedCount > 0) { alert(`${addedCount}명 업로드 됨`); saveDataToStorage(); renderMembersList(); } else { alert("유효한 데이터 없음"); }
+                    if (addedCount > 0) { alert(`${addedCount}명 업로드 됨`); saveDataToStorage(); } else { alert("유효한 데이터 없음"); }
                 } catch (err) { alert("오류 발생: 올바른 양식인지 확인해주세요."); }
                 document.getElementById('excel-upload').value = "";
             };
@@ -4569,7 +4580,116 @@
             if (sortedMatches.length === 1) { members.forEach(m => m.prevRank = m.currentRank); }
         }
 
+        function renderRanking() {
+            const selector = document.getElementById('season-selector');
+            const mode = selector ? selector.value : "current";
+            const tbody = document.getElementById('ranking-table-body');
+            const instruction = document.getElementById('ranking-instruction');
 
+            tbody.innerHTML = '';
+
+            let displayMembers = [];
+            let displayHistory = []; // 기준일 추출을 위한 경기 기록 배열
+            let isPastSeason = mode !== "current";
+
+            // 1. 상태 및 타겟 데이터 결정
+            if (isPastSeason) {
+                const seasonIndex = parseInt(mode);
+                if (appConfig.pastSeasons && appConfig.pastSeasons[seasonIndex]) {
+                    displayMembers = appConfig.pastSeasons[seasonIndex].members;
+                    displayHistory = appConfig.pastSeasons[seasonIndex].matchHistory || [];
+                }
+                instruction.innerText = "🔒 과거 시즌 (조회 전용)";
+                instruction.className = "text-[11px] text-slate-500 font-bold bg-slate-100 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm";
+            } else {
+                displayMembers = members.filter(m => m.status !== 'inactive' && m.type === '연회원' && m.score > 0);
+                displayHistory = matchHistory;
+                instruction.innerText = "👆 이름을 터치하면 상세기록";
+                instruction.className = "text-[11px] text-indigo-600 font-bold bg-white/80 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-indigo-100 shadow-sm transition-all";
+            }
+
+            // --- 2. 기준일 추출 및 UI 동적 주입 로직 시작 ---
+            let referenceDateText = "기록 없음";
+            if (displayHistory && displayHistory.length > 0) {
+                // matchHistory 배열에서 date 값만 뽑아내어 내림차순(최신순)으로 정렬 후 가장 첫 번째 값(가장 최근 날짜) 획득
+                let latestDate = displayHistory.map(m => m.date).filter(Boolean).sort().reverse()[0];
+                if (latestDate) {
+                    let parts = latestDate.split('-');
+                    if (parts.length === 3) {
+                        // '0' 제거 포맷팅: 2026-01-17 -> 2026.1.17.
+                        referenceDateText = `${parts[0]}.${parseInt(parts[1], 10)}.${parseInt(parts[2], 10)}.`;
+                    } else {
+                        referenceDateText = latestDate;
+                    }
+                }
+            }
+
+            // 순위표 위 instruction 영역의 DOM 구조를 플렉스(Flex)로 바꾸고 기준일을 왼쪽에 삽입
+            let refDateEl = document.getElementById('ranking-reference-date');
+            if (!refDateEl) {
+                const instructionContainer = instruction.parentElement; // div.mb-2.px-1.text-right
+                instructionContainer.classList.remove('text-right');
+                instructionContainer.classList.add('flex', 'justify-between', 'items-center');
+
+                refDateEl = document.createElement('span');
+                refDateEl.id = 'ranking-reference-date';
+                // Tailwind CSS 적용
+                refDateEl.className = 'text-[10px] text-slate-500 font-bold tracking-tight bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100 shadow-sm';
+                instructionContainer.insertBefore(refDateEl, instructionContainer.firstChild);
+            }
+            refDateEl.innerText = `기준일(${referenceDateText})`;
+            // --- 기준일 로직 끝 ---
+
+            // 3. 순위 테이블 렌더링
+            if (displayMembers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-16 text-center"><div class="text-5xl mb-4 drop-shadow-sm">📭</div><p class="font-extrabold text-slate-700 text-base">점수가 등록된 회원이 없습니다</p><p class="text-xs mt-2 text-slate-400">경기를 진행하면 순위가 나타납니다.</p></td></tr>`;
+                return;
+            }
+
+            displayMembers.sort((a, b) => b.score - a.score);
+
+            displayMembers.forEach((m, index) => {
+                let rankDisplay = m.currentRank;
+
+                if (m.currentRank === 1) {
+                    rankDisplay = `<div class="w-7 h-7 mx-auto bg-gradient-to-br from-yellow-300 to-yellow-500 text-white rounded-full flex items-center justify-center font-extrabold shadow-[0_2px_10px_rgba(234,179,8,0.4)]">1</div>`;
+                } else if (m.currentRank === 2) {
+                    rankDisplay = `<div class="w-6 h-6 mx-auto bg-gradient-to-br from-slate-300 to-slate-400 text-white rounded-full flex items-center justify-center font-bold shadow-[0_2px_10px_rgba(148,163,184,0.4)]">2</div>`;
+                } else if (m.currentRank === 3) {
+                    rankDisplay = `<div class="w-6 h-6 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-full flex items-center justify-center font-bold shadow-[0_2px_10px_rgba(234,88,12,0.4)]">3</div>`;
+                } else if (index > 0 && displayMembers[index - 1].currentRank === m.currentRank) {
+                    // 동률(Tie) 처리: 이전 회원과 순위가 같으면 '-' 표시 (4~10위 구간 동률 시에도 우선 적용)
+                    rankDisplay = `<span class="text-slate-300 font-medium">-</span>`;
+                } else if (m.currentRank >= 4 && m.currentRank <= 10) {
+                    // 4~10위: Top 10 전용 둥근 네모 뱃지 스타일
+                    rankDisplay = `<div class="w-6 h-6 mx-auto bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center font-bold shadow-sm">${m.currentRank}</div>`;
+                } else {
+                    // 11위 이하: 일반 텍스트 스타일
+                    rankDisplay = `<span class="text-slate-500 font-extrabold">${m.currentRank}</span>`;
+                }
+
+                let rankDiff = (m.prevRank === '-' || m.currentRank === '-') ? 0 : m.prevRank - m.currentRank;
+                let rankIcon = rankDiff > 0 ? `<span class="text-red-500">▲ ${rankDiff}</span>` : rankDiff < 0 ? `<span class="text-blue-500">▼ ${Math.abs(rankDiff)}</span>` : `<span class="text-slate-300">-</span>`;
+
+                let clickEvent = isPastSeason ? "" : `onclick="toggleMemberDetail(${m.id})"`;
+                let hoverClass = isPastSeason ? "" : "hover:bg-indigo-50/50 cursor-pointer";
+
+                tbody.innerHTML += `<tr class="bg-white ${hoverClass} transition-colors border-b border-slate-50" ${clickEvent}>
+            <td class="px-0.5 py-3 text-center align-middle">${rankDisplay}</td>
+            <td class="px-1 py-3 text-slate-800 font-extrabold text-[12px] whitespace-nowrap">${escapeHTML(m.name)}<span class="text-[9px] text-slate-400 font-medium ml-0.5 bg-slate-50 px-1 rounded">${m.handicap}부</span></td>
+            <td class="px-1 py-3 text-center text-[11px] font-bold text-slate-600">${m.attendCount || 0}</td>
+            <td class="px-1 py-3 text-center text-[11px] font-bold text-yellow-600">${m.win1Count || 0}</td>
+            <td class="px-1 py-3 text-center text-[11px] font-bold text-slate-400">${m.win2Count || 0}</td>
+            <td class="px-1 py-3 text-center text-[11px] font-bold text-orange-500">${m.win3Count || 0}</td>
+            <td class="px-1 py-3 text-right font-black text-indigo-600 text-[13px] tracking-tight">${(m.score || 0).toFixed(1)}</td>
+            <td class="px-1 py-3 text-center text-[10px] font-extrabold">${rankIcon}</td>
+        </tr>`;
+
+                if (!isPastSeason) {
+                    tbody.innerHTML += `<tr id="detail-row-${m.id}" class="hidden detail-row"><td colspan="8" class="p-0 border-0" id="detail-content-${m.id}"></td></tr>`;
+                }
+            });
+        }
 
         async function handleGeminiUpload(event) {
             const file = event.target.files[0];
@@ -4753,15 +4873,113 @@
             if (tableEl) { updateMatchOrderDisplay(targetLeague.id, g, tableEl.querySelectorAll('tbody tr').length); }
         }
 
+        function renderAll() {
             renderSeasonDropdown();
             recalculateAllScores();
+            renderRanking();
             renderHistory();
             renderMembersList();
             renderMemberPublicList();
             renderPastSeasonList(); // 👈 이 줄을 추가합니다.
         }
 
+        // 📸 순위표 이미지 캡처 및 클립보드 복사 함수
+        async function copyRankingImage() {
+            const targetElement = document.getElementById('ranking-card');
+            const captureBtn = document.getElementById('btn-capture-ranking');
+            if (!targetElement) return;
 
+            // [전처리] 1. 원본 상태 저장을 위한 변수 및 요소 수집
+            const originalStyles = new Map();
+            const scrollWrappers = targetElement.querySelectorAll('.overflow-x-auto');
+
+            try {
+                // [전처리] 2. 캡처 버튼 자체를 일시적으로 숨김 (화면에 안나오게)
+                if (captureBtn) {
+                    originalStyles.set(captureBtn, captureBtn.style.display);
+                    captureBtn.style.display = 'none';
+                }
+
+                // [전처리] 3. 타겟 요소 및 내부 스크롤 영역 강제 확장 (스크롤 잘림 방지)
+                originalStyles.set(targetElement, {
+                    overflow: targetElement.style.overflow,
+                    width: targetElement.style.width,
+                    height: targetElement.style.height,
+                    maxWidth: targetElement.style.maxWidth
+                });
+
+                // 전체 컨텐츠가 보이도록 스타일 변경
+                targetElement.style.overflow = 'visible';
+                targetElement.style.width = targetElement.scrollWidth + 'px';
+                targetElement.style.height = targetElement.scrollHeight + 'px';
+                targetElement.style.maxWidth = 'none';
+
+                scrollWrappers.forEach(wrapper => {
+                    originalStyles.set(wrapper, {
+                        overflow: wrapper.style.overflow,
+                        width: wrapper.style.width,
+                        maxWidth: wrapper.style.maxWidth
+                    });
+                    wrapper.style.overflow = 'visible';
+                    wrapper.style.width = wrapper.scrollWidth + 'px';
+                    wrapper.style.maxWidth = 'none';
+                });
+
+                // DOM 스타일 변경이 브라우저에 반영될 시간을 줌
+                await new Promise(resolve => setTimeout(resolve, 150));
+
+                // [이미지 생성] html2canvas 실행
+                const canvas = await html2canvas(targetElement, {
+                    scale: 2,           // 고화질 (Retina 대응)
+                    useCORS: true,      // 외부 이미지 허용 (필요 시)
+                    backgroundColor: '#ffffff', // 배경색 흰색 고정
+                    width: targetElement.scrollWidth,
+                    height: targetElement.scrollHeight,
+                    windowWidth: targetElement.scrollWidth,
+                    windowHeight: targetElement.scrollHeight
+                });
+
+                // [클립보드 복사] Blob으로 변환하여 복사
+                canvas.toBlob(async (blob) => {
+                    if (!blob) throw new Error("이미지 데이터(Blob) 생성 실패");
+                    try {
+                        // 최신 Clipboard API
+                        const data = [new ClipboardItem({ "image/png": blob })];
+                        await navigator.clipboard.write(data);
+                        alert("순위표 이미지가 복사되었습니다. 단톡방에 붙여넣기 하세요.");
+                    } catch (clipErr) {
+                        console.warn("클립보드 API 오류, 폴백 모달 실행:", clipErr);
+                        showFallbackImage(canvas, "이미지를 꾹 눌러서 복사하거나 저장하세요.");
+                    }
+                }, "image/png");
+
+            } catch (err) {
+                console.error("순위표 캡처 프로세스 오류:", err);
+                alert("이미지 생성 중 오류가 발생했습니다.");
+            } finally {
+                // [후처리] 4. 무조건 원래 상태로 복구 (finally 구문 필수 준수)
+                if (captureBtn && originalStyles.has(captureBtn)) {
+                    captureBtn.style.display = originalStyles.get(captureBtn);
+                }
+
+                const targetSaved = originalStyles.get(targetElement);
+                if (targetSaved) {
+                    targetElement.style.overflow = targetSaved.overflow;
+                    targetElement.style.width = targetSaved.width;
+                    targetElement.style.height = targetSaved.height;
+                    targetElement.style.maxWidth = targetSaved.maxWidth;
+                }
+
+                scrollWrappers.forEach(wrapper => {
+                    const saved = originalStyles.get(wrapper);
+                    if (saved) {
+                        wrapper.style.overflow = saved.overflow;
+                        wrapper.style.width = saved.width;
+                        wrapper.style.maxWidth = saved.maxWidth;
+                    }
+                });
+            }
+        }
 
         // 초기화
         generateGroupSizeInputs();
