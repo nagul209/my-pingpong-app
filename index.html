@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700;900&display=swap');
@@ -41,6 +42,23 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.database();
+        const auth = firebase.auth();
+
+        async function ensureSignedIn() {
+            if (auth.currentUser) return auth.currentUser;
+            const credential = await auth.signInAnonymously();
+            return credential.user;
+        }
+
+        function getFirebaseErrorMessage(error) {
+            if (error?.code === 'PERMISSION_DENIED' || error?.message?.includes('PERMISSION_DENIED')) {
+                return '데이터베이스 권한이 없습니다. 관리자에게 Realtime Database 규칙 배포 여부를 확인해주세요.';
+            }
+            if (error?.code === 'auth/admin-restricted-operation' || error?.code === 'auth/operation-not-allowed') {
+                return 'Firebase 익명 로그인이 꺼져 있습니다. Firebase Authentication에서 익명 로그인을 활성화해주세요.';
+            }
+            return error?.message || '잠시 후 다시 시도해주세요.';
+        }
 
         // -------------------------------------------------------------
         // 2. React 메인 앱 컴포넌트
@@ -51,28 +69,47 @@
             const [activeTab, setActiveTab] = useState('match');
             const [members, setMembers] = useState([]);
             const [matches, setMatches] = useState([]);
+            const [isAuthReady, setIsAuthReady] = useState(false);
+            const [authError, setAuthError] = useState('');
 
-            // Firebase 실시간 데이터 구독
+            // Firebase 익명 로그인 후 실시간 데이터 구독
             useEffect(() => {
-                const membersRef = db.ref('simple_members');
-                const matchesRef = db.ref('simple_matches');
+                let membersRef;
+                let matchesRef;
 
-                membersRef.on('value', snapshot => {
-                    const data = snapshot.val();
-                    const formatted = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-                    setMembers(formatted);
-                });
+                ensureSignedIn()
+                    .then(() => {
+                        setIsAuthReady(true);
+                        membersRef = db.ref('simple_members');
+                        matchesRef = db.ref('simple_matches');
 
-                matchesRef.on('value', snapshot => {
-                    const data = snapshot.val();
-                    const formatted = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-                    // 최신순 정렬
-                    setMatches(formatted.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                });
+                        membersRef.on('value', snapshot => {
+                            const data = snapshot.val();
+                            const formatted = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+                            setMembers(formatted);
+                        }, error => {
+                            console.error('회원 목록 불러오기 실패:', error);
+                            setAuthError(getFirebaseErrorMessage(error));
+                        });
+
+                        matchesRef.on('value', snapshot => {
+                            const data = snapshot.val();
+                            const formatted = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+                            // 최신순 정렬
+                            setMatches(formatted.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)));
+                        }, error => {
+                            console.error('경기 기록 불러오기 실패:', error);
+                            setAuthError(getFirebaseErrorMessage(error));
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Firebase 로그인 실패:', error);
+                        setAuthError(getFirebaseErrorMessage(error));
+                    });
 
                 return () => {
-                    membersRef.off();
-                    matchesRef.off();
+                    if (membersRef) membersRef.off();
+                    if (matchesRef) matchesRef.off();
                 };
             }, []);
 
@@ -83,8 +120,18 @@
                     </header>
 
                     <main className="flex-1 overflow-y-auto p-4">
-                        {activeTab === 'member' && <MemberTab members={members} />}
-                        {activeTab === 'match' && <MatchTab members={members} />}
+                        {authError && (
+                            <div className="mb-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">
+                                {authError}
+                            </div>
+                        )}
+                        {!isAuthReady && !authError && (
+                            <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm font-bold text-blue-700">
+                                Firebase에 연결하는 중입니다...
+                            </div>
+                        )}
+                        {activeTab === 'member' && <MemberTab members={members} isAuthReady={isAuthReady} />}
+                        {activeTab === 'match' && <MatchTab members={members} isAuthReady={isAuthReady} />}
                         {activeTab === 'stats' && <StatsTab members={members} matches={matches} />}
                     </main>
 
@@ -107,7 +154,7 @@
         // -------------------------------------------------------------
         // 3. 회원 관리 탭 컴포넌트
         // -------------------------------------------------------------
-        function MemberTab({ members }) {
+        function MemberTab({ members, isAuthReady }) {
             const DIVISION_OPTIONS = ['1부', '2부', '3부', '4부', '5부', '6부', '7부'];
             const [name, setName] = useState('');
             const [division, setDivision] = useState('');
@@ -116,6 +163,7 @@
             const addMember = async () => {
                 const trimmedName = name.trim();
 
+                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
                 if (!trimmedName) return alert("이름을 입력해주세요.");
                 if (!division) return alert("부수를 선택해주세요.");
 
@@ -125,14 +173,15 @@
                     await db.ref('simple_members').push({
                         name: trimmedName,
                         division,
-                        createdAt: Date.now()
+                        joinedAt: Date.now(),
+                        createdBy: auth.currentUser?.uid || null
                     });
                     setName('');
                     setDivision('');
                     alert("회원이 추가되었습니다.");
                 } catch (error) {
                     console.error('회원 저장 실패:', error);
-                    alert(`회원 저장에 실패했습니다.\n${error.message || '잠시 후 다시 시도해주세요.'}`);
+                    alert(`회원 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
                 } finally {
                     setIsSaving(false);
                 }
@@ -148,8 +197,8 @@
                                 <option value="" disabled>부수를 선택하세요</option>
                                 {DIVISION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                             </select>
-                            <button onClick={addMember} disabled={isSaving} className={`w-full text-white font-bold p-3 rounded-xl shadow-md btn-press ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600'}`}>
-                                {isSaving ? '저장 중...' : '등록하기'}
+                            <button onClick={addMember} disabled={isSaving || !isAuthReady} className={`w-full font-bold p-3 rounded-xl shadow-md btn-press ${isSaving || !isAuthReady ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white'}`}>
+                                {isSaving ? '저장 중...' : isAuthReady ? '등록하기' : '연결 중...'}
                             </button>
                         </div>
                     </div>
@@ -174,28 +223,35 @@
         // -------------------------------------------------------------
         // 4. 경기 기록 탭 컴포넌트 (원터치 최적화)
         // -------------------------------------------------------------
-        function MatchTab({ members }) {
+        function MatchTab({ members, isAuthReady }) {
             const today = new Date().toISOString().split('T')[0];
             const [date, setDate] = useState(today);
             const [playerA, setPlayerA] = useState('');
             const [playerB, setPlayerB] = useState('');
 
-            const saveMatch = (scoreA, scoreB) => {
+            const saveMatch = async (scoreA, scoreB) => {
+                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
                 if (!playerA || !playerB) return alert("두 선수를 모두 선택해주세요.");
                 if (playerA === playerB) return alert("서로 다른 선수를 선택해주세요.");
 
                 const nameA = members.find(m => m.id === playerA)?.name;
                 const nameB = members.find(m => m.id === playerB)?.name;
 
-                db.ref('simple_matches').push({
-                    date,
-                    playerA_id: playerA, playerA_name: nameA,
-                    playerB_id: playerB, playerB_name: nameB,
-                    scoreA, scoreB,
-                    timestamp: Date.now()
-                });
+                try {
+                    await db.ref('simple_matches').push({
+                        date,
+                        playerA_id: playerA, playerA_name: nameA,
+                        playerB_id: playerB, playerB_name: nameB,
+                        scoreA, scoreB,
+                        timestamp: Date.now(),
+                        createdBy: auth.currentUser?.uid || null
+                    });
 
-                alert(`${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!`);
+                    alert(`${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!`);
+                } catch (error) {
+                    console.error('경기 저장 실패:', error);
+                    alert(`경기 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
+                }
                 // 초기화 (다음 경기를 위해 선수는 유지하고 스코어만 리셋하는 개념이므로 알림만 띄움)
             };
 
