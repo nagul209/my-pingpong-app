@@ -389,11 +389,20 @@
                 setStatB(memberId);
             };
 
+            // 상대 전적에 해당하는 경기만 추려 최신순으로 표시
+            const h2hMatches = useMemo(() => {
+                if (!statA || !statB) return [];
+                return matches.filter(m =>
+                    (m.playerA_id === statA && m.playerB_id === statB) ||
+                    (m.playerA_id === statB && m.playerB_id === statA)
+                );
+            }, [statA, statB, matches]);
+
             // 상대 전적 계산
             const h2hStats = useMemo(() => {
                 if (!statA || !statB) return null;
                 let aWins = 0, bWins = 0;
-                matches.forEach(m => {
+                h2hMatches.forEach(m => {
                     if (m.playerA_id === statA && m.playerB_id === statB) {
                         if (m.scoreA > m.scoreB) aWins++; else bWins++;
                     } else if (m.playerA_id === statB && m.playerB_id === statA) {
@@ -401,7 +410,7 @@
                     }
                 });
                 return { aWins, bWins, total: aWins + bWins };
-            }, [statA, statB, matches]);
+            }, [statA, statB, h2hMatches]);
 
             return (
                 <div className="space-y-6">
@@ -434,6 +443,32 @@
                             <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">전적 기록이 없습니다.</div>
                         ) : null}
                     </div>
+
+                    {/* 선택한 상대 전적 상세 기록 */}
+                    {statA && statB ? (
+                        <div>
+                            <h2 className="font-extrabold text-gray-800 mb-3 text-lg px-1">🧾 상대 전적 상세 기록</h2>
+                            {h2hMatches.length > 0 ? (
+                                <ul className="space-y-2">
+                                    {h2hMatches.map(m => {
+                                        const aWon = m.scoreA > m.scoreB;
+                                        return (
+                                            <li key={m.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 text-sm">
+                                                <span className="shrink-0 text-[11px] font-black text-gray-400">{m.date}</span>
+                                                <div className="min-w-0 flex-1 flex items-center justify-between gap-2 font-extrabold text-gray-700">
+                                                    <span className={`min-w-0 flex-1 truncate ${aWon ? 'text-blue-600' : 'text-gray-600'}`}>{aWon ? '🏆 ' : ''}{m.playerA_name}</span>
+                                                    <span className="shrink-0 bg-gray-100 px-2 py-1 rounded-lg font-black text-gray-800">{m.scoreA} : {m.scoreB}</span>
+                                                    <span className={`min-w-0 flex-1 truncate text-right ${!aWon ? 'text-red-600' : 'text-gray-600'}`}>{!aWon ? '🏆 ' : ''}{m.playerB_name}</span>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            ) : (
+                                <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">선택한 선수들의 경기 기록이 없습니다.</div>
+                            )}
+                        </div>
+                    ) : null}
 
                     {/* 전체 기록 리스트 */}
                     <div>
