@@ -108,20 +108,34 @@
         // 3. 회원 관리 탭 컴포넌트
         // -------------------------------------------------------------
         function MemberTab({ members }) {
+            const DIVISION_OPTIONS = ['1부', '2부', '3부', '4부', '5부', '6부', '7부'];
             const [name, setName] = useState('');
             const [division, setDivision] = useState('');
+            const [isSaving, setIsSaving] = useState(false);
 
-            const addMember = () => {
+            const addMember = async () => {
                 const trimmedName = name.trim();
-                const trimmedDivision = division.trim();
 
                 if (!trimmedName) return alert("이름을 입력해주세요.");
-                if (!trimmedDivision) return alert("부수를 입력해주세요.");
+                if (!division) return alert("부수를 선택해주세요.");
 
-                db.ref('simple_members').push({ name: trimmedName, division: trimmedDivision });
-                setName('');
-                setDivision('');
-                alert("회원이 추가되었습니다.");
+                setIsSaving(true);
+
+                try {
+                    await db.ref('simple_members').push({
+                        name: trimmedName,
+                        division,
+                        createdAt: Date.now()
+                    });
+                    setName('');
+                    setDivision('');
+                    alert("회원이 추가되었습니다.");
+                } catch (error) {
+                    console.error('회원 저장 실패:', error);
+                    alert(`회원 저장에 실패했습니다.\n${error.message || '잠시 후 다시 시도해주세요.'}`);
+                } finally {
+                    setIsSaving(false);
+                }
             };
 
             return (
@@ -130,8 +144,13 @@
                         <h2 className="font-extrabold text-gray-800 mb-4 text-lg">➕ 새 회원 등록</h2>
                         <div className="space-y-3">
                             <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름" className="w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
-                            <input type="text" value={division} onChange={e => setDivision(e.target.value)} placeholder="부수 (예: 5부)" className="w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
-                            <button onClick={addMember} className="w-full bg-blue-600 text-white font-bold p-3 rounded-xl shadow-md btn-press">등록하기</button>
+                            <select value={division} onChange={e => setDivision(e.target.value)} className="w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="" disabled>부수를 선택하세요</option>
+                                {DIVISION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                            </select>
+                            <button onClick={addMember} disabled={isSaving} className={`w-full text-white font-bold p-3 rounded-xl shadow-md btn-press ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600'}`}>
+                                {isSaving ? '저장 중...' : '등록하기'}
+                            </button>
                         </div>
                     </div>
 
