@@ -369,9 +369,21 @@
         // 5. 통계 탭 컴포넌트
         // -------------------------------------------------------------
         function StatsTab({ members, matches }) {
+            const [personalPlayer, setPersonalPlayer] = useState('');
             const [statA, setStatA] = useState('');
             const [statB, setStatB] = useState('');
             const [activeStatSlot, setActiveStatSlot] = useState('A');
+
+            const getPlayerName = (playerId) => members.find(member => member.id === playerId)?.name || '선수';
+
+            const getOpponentInfo = (opponentId, fallbackName) => {
+                const member = members.find(item => item.id === opponentId);
+                return {
+                    id: opponentId,
+                    name: member?.name || fallbackName || '알 수 없음',
+                    division: member?.division || '부수 미입력'
+                };
+            };
 
             const selectStatPlayer = (memberId) => {
                 if (activeStatSlot === 'A') {
@@ -388,6 +400,58 @@
 
                 setStatB(memberId);
             };
+
+            // 개인 전적 계산: 선택 선수의 전체 경기와 상대별 기록을 집계
+            const personalStats = useMemo(() => {
+                if (!personalPlayer) return null;
+
+                const playerMatches = matches.filter(match =>
+                    match.playerA_id === personalPlayer || match.playerB_id === personalPlayer
+                );
+
+                const opponentMap = {};
+                let wins = 0;
+                let losses = 0;
+
+                playerMatches.forEach(match => {
+                    const isPlayerA = match.playerA_id === personalPlayer;
+                    const playerScore = isPlayerA ? match.scoreA : match.scoreB;
+                    const opponentScore = isPlayerA ? match.scoreB : match.scoreA;
+                    const opponentId = isPlayerA ? match.playerB_id : match.playerA_id;
+                    const opponentName = isPlayerA ? match.playerB_name : match.playerA_name;
+                    const didWin = playerScore > opponentScore;
+
+                    if (didWin) wins++; else losses++;
+
+                    if (!opponentMap[opponentId]) {
+                        opponentMap[opponentId] = {
+                            ...getOpponentInfo(opponentId, opponentName),
+                            wins: 0,
+                            losses: 0,
+                            total: 0
+                        };
+                    }
+
+                    opponentMap[opponentId].total++;
+                    if (didWin) opponentMap[opponentId].wins++; else opponentMap[opponentId].losses++;
+                });
+
+                const opponents = Object.values(opponentMap)
+                    .map(opponent => ({
+                        ...opponent,
+                        winRate: opponent.total ? Math.round((opponent.wins / opponent.total) * 100) : 0
+                    }))
+                    .sort((a, b) => b.total - a.total || b.wins - a.wins || a.name.localeCompare(b.name, 'ko'));
+
+                const total = wins + losses;
+                return {
+                    total,
+                    wins,
+                    losses,
+                    winRate: total ? Math.round((wins / total) * 100) : 0,
+                    opponents
+                };
+            }, [personalPlayer, matches, members]);
 
             // 상대 전적에 해당하는 경기만 추려 최신순으로 표시
             const h2hMatches = useMemo(() => {
@@ -414,6 +478,90 @@
 
             return (
                 <div className="space-y-6">
+                    {/* 개인 전적 검색 */}
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                        <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
+                        <p className="text-xs font-bold text-gray-400 mb-3">조사할 선수 카드를 선택하면 전체 승률과 상대별 기록이 표시됩니다.</p>
+
+                        {members.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2 mb-4">
+                                {members.map(member => {
+                                    const isSelected = personalPlayer === member.id;
+                                    return (
+                                        <button
+                                            key={member.id}
+                                            type="button"
+                                            onClick={() => setPersonalPlayer(member.id)}
+                                            className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-100 text-gray-800 hover:bg-emerald-50'}`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="font-black text-base truncate">{member.name}</span>
+                                                <span className={`shrink-0 text-[10px] font-black px-2 py-1 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                    {member.division || '부수'}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">등록된 회원이 없습니다.</div>
+                        )}
+
+                        {personalPlayer && personalStats ? (
+                            <div className="space-y-4">
+                                <div className="bg-emerald-600 text-white p-4 rounded-xl">
+                                    <div className="text-sm font-bold text-emerald-100 mb-3">{getPlayerName(personalPlayer)} 개인 통계</div>
+                                    <div className="grid grid-cols-4 gap-2 text-center">
+                                        <div>
+                                            <div className="text-2xl font-black">{personalStats.total}</div>
+                                            <div className="text-[10px] font-bold text-emerald-100">경기</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black">{personalStats.wins}</div>
+                                            <div className="text-[10px] font-bold text-emerald-100">승</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black">{personalStats.losses}</div>
+                                            <div className="text-[10px] font-bold text-emerald-100">패</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black">{personalStats.winRate}%</div>
+                                            <div className="text-[10px] font-bold text-emerald-100">승률</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="font-extrabold text-gray-700 mb-2 text-sm">상대별 기록</h3>
+                                    {personalStats.opponents.length > 0 ? (
+                                        <ul className="space-y-2">
+                                            {personalStats.opponents.map(opponent => (
+                                                <li key={opponent.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        <div className="min-w-0">
+                                                            <div className="font-black text-gray-800 truncate">vs {opponent.name}</div>
+                                                            <div className="text-[10px] font-bold text-gray-400">{opponent.division}</div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-black text-emerald-600">{opponent.wins}승 {opponent.losses}패</div>
+                                                            <div className="text-[10px] font-bold text-gray-400">총 {opponent.total}전 · 승률 {opponent.winRate}%</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-2 bg-white rounded-full overflow-hidden">
+                                                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${opponent.winRate}%` }}></div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">이 선수의 경기 기록이 없습니다.</div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
+
                     {/* 상대 전적 검색 */}
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                         <h2 className="font-extrabold text-gray-800 mb-4 text-lg">⚔️ 상대 전적 비교</h2>
