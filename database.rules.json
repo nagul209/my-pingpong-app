@@ -1,0 +1,20 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "simple_members": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$memberId": {
+        ".validate": "newData.hasChildren(['name', 'division', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('division').isString() && (newData.child('division').val() == '1부' || newData.child('division').val() == '2부' || newData.child('division').val() == '3부' || newData.child('division').val() == '4부' || newData.child('division').val() == '5부' || newData.child('division').val() == '6부' || newData.child('division').val() == '7부') && newData.child('joinedAt').isNumber()"
+      }
+    },
+    "simple_matches": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$matchId": {
+        ".validate": "newData.hasChildren(['date', 'playerA_id', 'playerA_name', 'playerB_id', 'playerB_name', 'scoreA', 'scoreB', 'timestamp']) && newData.child('date').isString() && newData.child('playerA_id').isString() && newData.child('playerB_id').isString() && newData.child('playerA_id').val() != newData.child('playerB_id').val() && newData.child('playerA_name').isString() && newData.child('playerB_name').isString() && newData.child('scoreA').isNumber() && newData.child('scoreB').isNumber() && newData.child('timestamp').isNumber()"
+      }
+    }
+  }
+}
