@@ -180,6 +180,66 @@
         // -------------------------------------------------------------
         const { useState, useEffect, useMemo, useRef } = React;
 
+        function Toast({ toast, onDismiss }) {
+            if (!toast) return null;
+
+            const isSuccess = toast.type === 'success';
+            const styles = isSuccess
+                ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                : 'border-red-100 bg-red-50 text-red-800';
+            const icon = isSuccess ? '✅' : '⚠️';
+
+            return (
+                <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto z-[60]">
+                    <div className={`flex items-start gap-3 rounded-2xl border p-4 shadow-xl backdrop-blur ${styles}`} role="status" aria-live="polite">
+                        <span className="text-lg leading-none">{icon}</span>
+                        <p className="min-w-0 flex-1 whitespace-pre-line text-sm font-black leading-5">{toast.message}</p>
+                        <button type="button" onClick={onDismiss} className="shrink-0 rounded-full px-2 text-lg font-black opacity-60 btn-press" aria-label="토스트 닫기">×</button>
+                    </div>
+                </div>
+            );
+        }
+
+        function DeleteConfirmModal({ match, isDeleting, onCancel, onDelete }) {
+            if (!match) return null;
+
+            const aWon = Number(match.scoreA) > Number(match.scoreB);
+
+            return (
+                <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/50 px-4 pb-24 pt-8 sm:items-center sm:pb-8" role="dialog" aria-modal="true" aria-labelledby="delete-match-title">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl">
+                        <div className="mb-4">
+                            <p className="text-xs font-black text-red-500">경기 기록 삭제</p>
+                            <h2 id="delete-match-title" className="mt-1 text-xl font-black text-gray-900">이 경기를 삭제할까요?</h2>
+                            <p className="mt-1 text-sm font-bold text-gray-500">삭제한 기록은 되돌릴 수 없습니다.</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="mb-3 text-center text-xs font-black text-gray-400">{match.date}</div>
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                <div className={`min-w-0 rounded-2xl bg-white p-3 text-center shadow-sm ${aWon ? 'ring-2 ring-blue-100' : ''}`}>
+                                    <div className="text-[10px] font-black text-gray-400">선수 A</div>
+                                    <div className={`truncate text-lg font-black ${aWon ? 'text-blue-600' : 'text-gray-700'}`}>{aWon ? '🏆 ' : ''}{match.playerA_name}</div>
+                                </div>
+                                <div className="rounded-xl bg-gray-900 px-3 py-2 text-lg font-black tracking-widest text-white">{match.scoreA} : {match.scoreB}</div>
+                                <div className={`min-w-0 rounded-2xl bg-white p-3 text-center shadow-sm ${!aWon ? 'ring-2 ring-red-100' : ''}`}>
+                                    <div className="text-[10px] font-black text-gray-400">선수 B</div>
+                                    <div className={`truncate text-lg font-black ${!aWon ? 'text-red-600' : 'text-gray-700'}`}>{!aWon ? '🏆 ' : ''}{match.playerB_name}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-2 gap-3">
+                            <button type="button" onClick={onCancel} disabled={isDeleting} className="rounded-2xl bg-gray-100 p-3 font-black text-gray-700 btn-press disabled:opacity-50">취소</button>
+                            <button type="button" onClick={() => onDelete(match)} disabled={isDeleting} className="rounded-2xl bg-red-600 p-3 font-black text-white shadow-md btn-press disabled:bg-gray-400">
+                                {isDeleting ? '삭제 중...' : '삭제'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function App() {
             const [activeTab, setActiveTab] = useState('match');
             const [members, setMembers] = useState([]);
@@ -190,7 +250,21 @@
             const [isLoadingMoreMatches, setIsLoadingMoreMatches] = useState(false);
             const [isAuthReady, setIsAuthReady] = useState(false);
             const [authError, setAuthError] = useState('');
+            const [toast, setToast] = useState(null);
+            const toastTimerRef = useRef(null);
             const recentMatchIdsRef = useRef(new Set());
+
+            const showToast = ({ type = 'success', message }) => {
+                if (!message) return;
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                setToast({ type, message });
+                toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+            };
+
+            const dismissToast = () => {
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                setToast(null);
+            };
 
             // Firebase 익명 로그인 후 실시간 데이터 구독
             useEffect(() => {
@@ -259,6 +333,7 @@
                     if (recentMatchesQuery) recentMatchesQuery.off();
                     if (statsByPlayerRef) statsByPlayerRef.off();
                     if (h2hStatsRef) h2hStatsRef.off();
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                 };
             }, []);
 
@@ -291,7 +366,7 @@
                     setHasMoreMatches(olderMatches.length === MATCH_PAGE_SIZE);
                 } catch (error) {
                     console.error('이전 경기 기록 불러오기 실패:', error);
-                    alert(`이전 경기 기록을 불러오지 못했습니다.\n${getFirebaseErrorMessage(error)}`);
+                    showToast({ type: 'error', message: `이전 경기 기록을 불러오지 못했습니다.\n${getFirebaseErrorMessage(error)}` });
                 } finally {
                     setIsLoadingMoreMatches(false);
                 }
@@ -337,8 +412,8 @@
                                 Firebase에 연결하는 중입니다...
                             </div>
                         )}
-                        {activeTab === 'member' && <MemberTab members={members} isAuthReady={isAuthReady} />}
-                        {activeTab === 'match' && <MatchTab members={members} isAuthReady={isAuthReady} />}
+                        {activeTab === 'member' && <MemberTab members={members} isAuthReady={isAuthReady} onToast={showToast} />}
+                        {activeTab === 'match' && <MatchTab members={members} isAuthReady={isAuthReady} onToast={showToast} />}
                         {activeTab === 'stats' && (
                             <StatsTab
                                 members={members}
@@ -351,9 +426,12 @@
                                 onLoadMoreMatches={loadMoreMatches}
                                 onMatchUpdated={updateLoadedMatch}
                                 onMatchDeleted={removeLoadedMatch}
+                                onToast={showToast}
                             />
                         )}
                     </main>
+
+                    <Toast toast={toast} onDismiss={dismissToast} />
 
                     {/* 하단 네비게이션 */}
                     <nav aria-label="주요 메뉴" className="bg-white border-t flex justify-around gap-2 p-3 fixed bottom-0 w-full max-w-md text-sm font-bold text-gray-400 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -553,7 +631,7 @@
         // -------------------------------------------------------------
         // 3. 회원 관리 탭 컴포넌트
         // -------------------------------------------------------------
-        function MemberTab({ members, isAuthReady }) {
+        function MemberTab({ members, isAuthReady, onToast }) {
             const DIVISION_OPTIONS = ['1부', '2부', '3부', '4부', '5부', '6부', '7부'];
             const [name, setName] = useState('');
             const [division, setDivision] = useState('');
@@ -562,9 +640,9 @@
             const addMember = async () => {
                 const trimmedName = name.trim();
 
-                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
-                if (!trimmedName) return alert("이름을 입력해주세요.");
-                if (!division) return alert("부수를 선택해주세요.");
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
+                if (!trimmedName) return onToast({ type: 'error', message: '이름을 입력해주세요.' });
+                if (!division) return onToast({ type: 'error', message: '부수를 선택해주세요.' });
 
                 setIsSaving(true);
 
@@ -579,10 +657,10 @@
                     await db.ref('simple_members').push(newMember);
                     setName('');
                     setDivision('');
-                    alert("회원이 추가되었습니다.");
+                    onToast({ type: 'success', message: '회원이 추가되었습니다.' });
                 } catch (error) {
                     console.error('회원 저장 실패:', error);
-                    alert(`회원 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
+                    onToast({ type: 'error', message: `회원 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
                 } finally {
                     setIsSaving(false);
                 }
@@ -624,7 +702,7 @@
         // -------------------------------------------------------------
         // 4. 경기 기록 탭 컴포넌트 (원터치 최적화)
         // -------------------------------------------------------------
-        function MatchTab({ members, isAuthReady }) {
+        function MatchTab({ members, isAuthReady, onToast }) {
             const today = new Date().toISOString().split('T')[0];
             const [date, setDate] = useState(today);
             const [playerA, setPlayerA] = useState('');
@@ -648,7 +726,7 @@
                 }
 
                 if (memberId === playerA) {
-                    alert('서로 다른 선수를 선택해주세요.');
+                    onToast({ type: 'error', message: '서로 다른 선수를 선택해주세요.' });
                     return;
                 }
 
@@ -657,7 +735,7 @@
 
             const saveMatch = async (scoreA, scoreB) => {
                 if (isSavingMatch || isSavingMatchRef.current) return;
-                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
 
                 const nameA = members.find(m => m.id === playerA)?.name;
                 const nameB = members.find(m => m.id === playerB)?.name;
@@ -670,12 +748,12 @@
                     scoreA,
                     scoreB
                 });
-                if (validationMessage) return alert(validationMessage);
+                if (validationMessage) return onToast({ type: 'error', message: validationMessage });
 
                 const matchKey = [date, playerA, playerB, scoreA, scoreB].join('|');
                 const now = Date.now();
                 if (recentSavedMatchRef.current.key === matchKey && now - recentSavedMatchRef.current.savedAt < duplicateGuardMs) {
-                    return alert('방금 저장한 동일 경기입니다. 잠시 후 다시 시도해주세요.');
+                    return onToast({ type: 'error', message: '방금 저장한 동일 경기입니다. 잠시 후 다시 시도해주세요.' });
                 }
 
                 setIsSavingMatch(true);
@@ -696,10 +774,10 @@
                     await db.ref().update(buildSaveMatchUpdates(matchRef.key, newMatch));
 
                     recentSavedMatchRef.current = { key: matchKey, savedAt: Date.now() };
-                    alert(`${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!`);
+                    onToast({ type: 'success', message: `${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!` });
                 } catch (error) {
                     console.error('경기 저장 실패:', error);
-                    alert(`경기 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
+                    onToast({ type: 'error', message: `경기 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
                 } finally {
                     isSavingMatchRef.current = false;
                     setIsSavingMatch(false);
@@ -758,7 +836,7 @@
         // -------------------------------------------------------------
         // 5. 통계 탭 컴포넌트
         // -------------------------------------------------------------
-        function StatsTab({ members, matches, statsByPlayer, h2hStatsByPair, isAuthReady, hasMoreMatches, isLoadingMoreMatches, onLoadMoreMatches, onMatchUpdated, onMatchDeleted }) {
+        function StatsTab({ members, matches, statsByPlayer, h2hStatsByPair, isAuthReady, hasMoreMatches, isLoadingMoreMatches, onLoadMoreMatches, onMatchUpdated, onMatchDeleted, onToast }) {
             const [personalPlayer, setPersonalPlayer] = useState('');
             const [statA, setStatA] = useState('');
             const [statB, setStatB] = useState('');
@@ -770,6 +848,7 @@
             const [editScoreA, setEditScoreA] = useState(3);
             const [editScoreB, setEditScoreB] = useState(0);
             const [savingMatchId, setSavingMatchId] = useState('');
+            const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null);
 
             const getPlayerName = (playerId) => members.find(member => member.id === playerId)?.name || '선수';
 
@@ -808,7 +887,7 @@
             };
 
             const updateMatch = async (match) => {
-                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
 
                 const nameA = getMemberName(editPlayerA, match.playerA_id === editPlayerA ? match.playerA_name : '선수 A');
                 const nameB = getMemberName(editPlayerB, match.playerB_id === editPlayerB ? match.playerB_name : '선수 B');
@@ -821,7 +900,7 @@
                     scoreA: editScoreA,
                     scoreB: editScoreB
                 });
-                if (validationMessage) return alert(validationMessage);
+                if (validationMessage) return onToast({ type: 'error', message: validationMessage });
 
                 setSavingMatchId(match.id);
 
@@ -844,20 +923,22 @@
                     await db.ref().update(buildReplaceMatchUpdates(match.id, match, updatedMatch));
                     onMatchUpdated(match.id, updatedMatch);
                     cancelEditMatch();
-                    alert('경기 기록이 수정되었습니다.');
+                    onToast({ type: 'success', message: '경기 기록이 수정되었습니다.' });
                 } catch (error) {
                     console.error('경기 수정 실패:', error);
-                    alert(`경기 수정에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
+                    onToast({ type: 'error', message: `경기 수정에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
                 } finally {
                     setSavingMatchId('');
                 }
             };
 
-            const deleteMatch = async (match) => {
-                if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
+            const requestDeleteMatch = (match) => {
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
+                setPendingDeleteMatch(match);
+            };
 
-                const ok = confirm(`${match.date} ${match.playerA_name} ${match.scoreA} : ${match.scoreB} ${match.playerB_name}\n이 경기 기록을 삭제할까요?`);
-                if (!ok) return;
+            const deleteMatch = async (match) => {
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
 
                 setSavingMatchId(match.id);
 
@@ -865,10 +946,11 @@
                     await db.ref().update(buildDeleteMatchUpdates(match.id, match));
                     onMatchDeleted(match.id);
                     if (editingMatchId === match.id) cancelEditMatch();
-                    alert('경기 기록이 삭제되었습니다.');
+                    setPendingDeleteMatch(null);
+                    onToast({ type: 'success', message: '경기 기록이 삭제되었습니다.' });
                 } catch (error) {
                     console.error('경기 삭제 실패:', error);
-                    alert(`경기 삭제에 실패했습니다.\n${getFirebaseErrorMessage(error)}`);
+                    onToast({ type: 'error', message: `경기 삭제에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
                 } finally {
                     setSavingMatchId('');
                 }
@@ -883,7 +965,7 @@
                 }
 
                 if (memberId === statA) {
-                    alert('서로 다른 선수를 선택해주세요.');
+                    onToast({ type: 'error', message: '서로 다른 선수를 선택해주세요.' });
                     return;
                 }
 
@@ -947,7 +1029,14 @@
             }, [statA, statB, h2hStatsByPair]);
 
             return (
-                <div className="space-y-6">
+                <>
+                    <DeleteConfirmModal
+                        match={pendingDeleteMatch}
+                        isDeleting={Boolean(pendingDeleteMatch && savingMatchId === pendingDeleteMatch.id)}
+                        onCancel={() => setPendingDeleteMatch(null)}
+                        onDelete={deleteMatch}
+                    />
+                    <div className="space-y-6">
                     {/* 개인 전적 검색 */}
                     <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
@@ -1122,7 +1211,7 @@
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => deleteMatch(m)}
+                                                        onClick={() => requestDeleteMatch(m)}
                                                         disabled={isSaving}
                                                         className={`text-[11px] font-black px-3 py-1 rounded-full ${DANGER_BUTTON_CLASS}`}
                                                     >
@@ -1212,7 +1301,8 @@
                             <div className="mt-4 text-center text-[11px] font-bold text-gray-400">불러올 이전 경기 기록이 없습니다.</div>
                         ) : null}
                     </div>
-                </div>
+                    </div>
+                </>
             );
         }
 
