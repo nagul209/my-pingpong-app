@@ -27,8 +27,9 @@
     "simple_matches": {
       ".read": "auth != null",
       ".write": "auth != null",
+      ".indexOn": ["timestamp", "playerA_id", "playerB_id"],
       "$matchId": {
-        ".validate": "newData.hasChildren(['date', 'playerA_id', 'playerA_name', 'playerB_id', 'playerB_name', 'scoreA', 'scoreB', 'timestamp']) && newData.childrenCount() >= 8 && newData.childrenCount() <= 11 && newData.child('playerA_id').val() != newData.child('playerB_id').val() && ((newData.child('scoreA').val() == 3 && (newData.child('scoreB').val() == 0 || newData.child('scoreB').val() == 1 || newData.child('scoreB').val() == 2)) || (newData.child('scoreB').val() == 3 && (newData.child('scoreA').val() == 0 || newData.child('scoreA').val() == 1 || newData.child('scoreA').val() == 2)))",
+        ".validate": "newData.hasChildren(['date', 'playerA_id', 'playerA_name', 'playerB_id', 'playerB_name', 'scoreA', 'scoreB', 'timestamp']) && newData.childrenCount() >= 8 && newData.childrenCount() <= 12 && newData.child('playerA_id').val() != newData.child('playerB_id').val() && ((newData.child('scoreA').val() == 3 && (newData.child('scoreB').val() == 0 || newData.child('scoreB').val() == 1 || newData.child('scoreB').val() == 2)) || (newData.child('scoreB').val() == 3 && (newData.child('scoreA').val() == 0 || newData.child('scoreA').val() == 1 || newData.child('scoreA').val() == 2)))",
         "date": {
           ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
         },
@@ -61,6 +62,67 @@
         },
         "updatedBy": {
           ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "statsVersion": {
+          ".validate": "newData.isNumber() && newData.val() == 1"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "stats_by_player": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$playerId": {
+        "total": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "wins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "losses": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "opponents": {
+          "$opponentId": {
+            "total": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "wins": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "losses": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "h2h_stats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$pairId": {
+        "player1_id": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "player2_id": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "player1_wins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "player2_wins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "total": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
         },
         "$other": {
           ".validate": false

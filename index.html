@@ -71,6 +71,72 @@
             { scoreA: 1, scoreB: 3 },
             { scoreA: 2, scoreB: 3 }
         ];
+        const MATCH_PAGE_SIZE = 50;
+
+        function sortMatchesByRecent(matchList) {
+            return [...matchList].sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+        }
+
+        function formatMatchesSnapshot(snapshot) {
+            const data = snapshot.val();
+            return data ? sortMatchesByRecent(Object.keys(data).map(key => ({ id: key, ...data[key] }))) : [];
+        }
+
+        function makeH2hKey(playerAId, playerBId) {
+            return [playerAId, playerBId].sort().join('_vs_');
+        }
+
+        function getMatchWinnerId(match) {
+            return Number(match.scoreA) > Number(match.scoreB) ? match.playerA_id : match.playerB_id;
+        }
+
+        function addIncrement(updates, path, amount) {
+            if (!amount) return;
+            updates[path] = firebase.database.ServerValue.increment(amount);
+        }
+
+        function addMatchStatsUpdates(updates, match, direction) {
+            if (!match?.playerA_id || !match?.playerB_id || !isAllowedMatchScore(Number(match.scoreA), Number(match.scoreB))) return;
+
+            const winnerId = getMatchWinnerId(match);
+            const players = [
+                { id: match.playerA_id, opponentId: match.playerB_id, won: winnerId === match.playerA_id },
+                { id: match.playerB_id, opponentId: match.playerA_id, won: winnerId === match.playerB_id }
+            ];
+
+            players.forEach(player => {
+                addIncrement(updates, `stats_by_player/${player.id}/total`, direction);
+                addIncrement(updates, `stats_by_player/${player.id}/${player.won ? 'wins' : 'losses'}`, direction);
+                addIncrement(updates, `stats_by_player/${player.id}/opponents/${player.opponentId}/total`, direction);
+                addIncrement(updates, `stats_by_player/${player.id}/opponents/${player.opponentId}/${player.won ? 'wins' : 'losses'}`, direction);
+            });
+
+            const [player1Id, player2Id] = [match.playerA_id, match.playerB_id].sort();
+            const pairKey = makeH2hKey(match.playerA_id, match.playerB_id);
+            updates[`h2h_stats/${pairKey}/player1_id`] = player1Id;
+            updates[`h2h_stats/${pairKey}/player2_id`] = player2Id;
+            addIncrement(updates, `h2h_stats/${pairKey}/total`, direction);
+            addIncrement(updates, `h2h_stats/${pairKey}/${winnerId === player1Id ? 'player1_wins' : 'player2_wins'}`, direction);
+        }
+
+        function buildSaveMatchUpdates(matchId, match) {
+            const updates = { [`simple_matches/${matchId}`]: match };
+            addMatchStatsUpdates(updates, match, 1);
+            return updates;
+        }
+
+        function buildReplaceMatchUpdates(matchId, previousMatch, nextMatch) {
+            const updates = { [`simple_matches/${matchId}`]: nextMatch };
+            if (previousMatch.statsVersion) addMatchStatsUpdates(updates, previousMatch, -1);
+            addMatchStatsUpdates(updates, nextMatch, 1);
+            return updates;
+        }
+
+        function buildDeleteMatchUpdates(matchId, match) {
+            const updates = { [`simple_matches/${matchId}`]: null };
+            if (match.statsVersion) addMatchStatsUpdates(updates, match, -1);
+            return updates;
+        }
 
         function isAllowedMatchScore(scoreA, scoreB) {
             return MATCH_SCORE_OPTIONS.some(option => option.scoreA === scoreA && option.scoreB === scoreB);
@@ -95,19 +161,28 @@
             const [activeTab, setActiveTab] = useState('match');
             const [members, setMembers] = useState([]);
             const [matches, setMatches] = useState([]);
+            const [statsByPlayer, setStatsByPlayer] = useState({});
+            const [h2hStatsByPair, setH2hStatsByPair] = useState({});
+            const [hasMoreMatches, setHasMoreMatches] = useState(false);
+            const [isLoadingMoreMatches, setIsLoadingMoreMatches] = useState(false);
             const [isAuthReady, setIsAuthReady] = useState(false);
             const [authError, setAuthError] = useState('');
+            const recentMatchIdsRef = useRef(new Set());
 
             // Firebase 익명 로그인 후 실시간 데이터 구독
             useEffect(() => {
                 let membersRef;
-                let matchesRef;
+                let recentMatchesQuery;
+                let statsByPlayerRef;
+                let h2hStatsRef;
 
                 ensureSignedIn()
                     .then(() => {
                         setIsAuthReady(true);
                         membersRef = db.ref('simple_members');
-                        matchesRef = db.ref('simple_matches');
+                        recentMatchesQuery = db.ref('simple_matches').orderByChild('timestamp').limitToLast(MATCH_PAGE_SIZE);
+                        statsByPlayerRef = db.ref('stats_by_player');
+                        h2hStatsRef = db.ref('h2h_stats');
 
                         membersRef.on('value', snapshot => {
                             const data = snapshot.val();
@@ -118,13 +193,36 @@
                             setAuthError(getFirebaseErrorMessage(error));
                         });
 
-                        matchesRef.on('value', snapshot => {
-                            const data = snapshot.val();
-                            const formatted = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-                            // 최신순 정렬
-                            setMatches(formatted.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)));
+                        recentMatchesQuery.on('value', snapshot => {
+                            const recentMatches = formatMatchesSnapshot(snapshot);
+                            const recentIds = new Set(recentMatches.map(match => match.id));
+                            setMatches(current => {
+                                const merged = new Map(
+                                    current
+                                        .filter(match => !recentMatchIdsRef.current.has(match.id) || recentIds.has(match.id))
+                                        .map(match => [match.id, match])
+                                );
+                                recentMatches.forEach(match => merged.set(match.id, match));
+                                return sortMatchesByRecent(Array.from(merged.values()));
+                            });
+                            recentMatchIdsRef.current = recentIds;
+                            setHasMoreMatches(recentMatches.length === MATCH_PAGE_SIZE);
                         }, error => {
                             console.error('경기 기록 불러오기 실패:', error);
+                            setAuthError(getFirebaseErrorMessage(error));
+                        });
+
+                        statsByPlayerRef.on('value', snapshot => {
+                            setStatsByPlayer(snapshot.val() || {});
+                        }, error => {
+                            console.error('개인 통계 불러오기 실패:', error);
+                            setAuthError(getFirebaseErrorMessage(error));
+                        });
+
+                        h2hStatsRef.on('value', snapshot => {
+                            setH2hStatsByPair(snapshot.val() || {});
+                        }, error => {
+                            console.error('상대 전적 통계 불러오기 실패:', error);
                             setAuthError(getFirebaseErrorMessage(error));
                         });
                     })
@@ -135,9 +233,46 @@
 
                 return () => {
                     if (membersRef) membersRef.off();
-                    if (matchesRef) matchesRef.off();
+                    if (recentMatchesQuery) recentMatchesQuery.off();
+                    if (statsByPlayerRef) statsByPlayerRef.off();
+                    if (h2hStatsRef) h2hStatsRef.off();
                 };
             }, []);
+
+            const updateLoadedMatch = (matchId, match) => {
+                setMatches(current => sortMatchesByRecent(current.map(item => item.id === matchId ? { id: matchId, ...match } : item)));
+            };
+
+            const removeLoadedMatch = (matchId) => {
+                setMatches(current => current.filter(match => match.id !== matchId));
+            };
+
+            const loadMoreMatches = async () => {
+                if (!isAuthReady || isLoadingMoreMatches || matches.length === 0) return;
+
+                setIsLoadingMoreMatches(true);
+                try {
+                    const oldestTimestamp = Math.min(...matches.map(match => Number(match.timestamp) || Date.now()));
+                    const snapshot = await db.ref('simple_matches')
+                        .orderByChild('timestamp')
+                        .endAt(oldestTimestamp - 1)
+                        .limitToLast(MATCH_PAGE_SIZE)
+                        .once('value');
+                    const olderMatches = formatMatchesSnapshot(snapshot);
+
+                    setMatches(current => {
+                        const merged = new Map(current.map(match => [match.id, match]));
+                        olderMatches.forEach(match => merged.set(match.id, match));
+                        return sortMatchesByRecent(Array.from(merged.values()));
+                    });
+                    setHasMoreMatches(olderMatches.length === MATCH_PAGE_SIZE);
+                } catch (error) {
+                    console.error('이전 경기 기록 불러오기 실패:', error);
+                    alert(`이전 경기 기록을 불러오지 못했습니다.\n${getFirebaseErrorMessage(error)}`);
+                } finally {
+                    setIsLoadingMoreMatches(false);
+                }
+            };
 
             return (
                 <div className="flex flex-col h-screen">
@@ -158,7 +293,20 @@
                         )}
                         {activeTab === 'member' && <MemberTab members={members} isAuthReady={isAuthReady} />}
                         {activeTab === 'match' && <MatchTab members={members} isAuthReady={isAuthReady} />}
-                        {activeTab === 'stats' && <StatsTab members={members} matches={matches} isAuthReady={isAuthReady} />}
+                        {activeTab === 'stats' && (
+                            <StatsTab
+                                members={members}
+                                matches={matches}
+                                statsByPlayer={statsByPlayer}
+                                h2hStatsByPair={h2hStatsByPair}
+                                isAuthReady={isAuthReady}
+                                hasMoreMatches={hasMoreMatches}
+                                isLoadingMoreMatches={isLoadingMoreMatches}
+                                onLoadMoreMatches={loadMoreMatches}
+                                onMatchUpdated={updateLoadedMatch}
+                                onMatchDeleted={removeLoadedMatch}
+                            />
+                        )}
                     </main>
 
                     {/* 하단 네비게이션 */}
@@ -376,11 +524,13 @@
                         playerA_id: playerA, playerA_name: nameA,
                         playerB_id: playerB, playerB_name: nameB,
                         scoreA, scoreB,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        statsVersion: 1
                     };
                     if (auth.currentUser?.uid) newMatch.createdBy = auth.currentUser.uid;
 
-                    await db.ref('simple_matches').push(newMatch);
+                    const matchRef = db.ref('simple_matches').push();
+                    await db.ref().update(buildSaveMatchUpdates(matchRef.key, newMatch));
 
                     recentSavedMatchRef.current = { key: matchKey, savedAt: Date.now() };
                     alert(`${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!`);
@@ -438,7 +588,7 @@
         // -------------------------------------------------------------
         // 5. 통계 탭 컴포넌트
         // -------------------------------------------------------------
-        function StatsTab({ members, matches, isAuthReady }) {
+        function StatsTab({ members, matches, statsByPlayer, h2hStatsByPair, isAuthReady, hasMoreMatches, isLoadingMoreMatches, onLoadMoreMatches, onMatchUpdated, onMatchDeleted }) {
             const [personalPlayer, setPersonalPlayer] = useState('');
             const [statA, setStatA] = useState('');
             const [statB, setStatB] = useState('');
@@ -515,12 +665,14 @@
                         scoreA: editScoreA,
                         scoreB: editScoreB,
                         timestamp: match.timestamp || Date.now(),
-                        updatedAt: Date.now()
+                        updatedAt: Date.now(),
+                        statsVersion: 1
                     };
                     if (match.createdBy) updatedMatch.createdBy = match.createdBy;
                     if (auth.currentUser?.uid) updatedMatch.updatedBy = auth.currentUser.uid;
 
-                    await db.ref(`simple_matches/${match.id}`).set(updatedMatch);
+                    await db.ref().update(buildReplaceMatchUpdates(match.id, match, updatedMatch));
+                    onMatchUpdated(match.id, updatedMatch);
                     cancelEditMatch();
                     alert('경기 기록이 수정되었습니다.');
                 } catch (error) {
@@ -540,7 +692,8 @@
                 setSavingMatchId(match.id);
 
                 try {
-                    await db.ref(`simple_matches/${match.id}`).remove();
+                    await db.ref().update(buildDeleteMatchUpdates(match.id, match));
+                    onMatchDeleted(match.id);
                     if (editingMatchId === match.id) cancelEditMatch();
                     alert('경기 기록이 삭제되었습니다.');
                 } catch (error) {
@@ -567,49 +720,29 @@
                 setStatB(memberId);
             };
 
-            // 개인 전적 계산: 선택 선수의 전체 경기와 상대별 기록을 집계
+            // 개인 전적 계산: 쓰기 시점에 누적된 stats_by_player 집계 노드를 사용
             const personalStats = useMemo(() => {
                 if (!personalPlayer) return null;
 
-                const playerMatches = matches.filter(match =>
-                    match.playerA_id === personalPlayer || match.playerB_id === personalPlayer
-                );
-
-                const opponentMap = {};
-                let wins = 0;
-                let losses = 0;
-
-                playerMatches.forEach(match => {
-                    const isPlayerA = match.playerA_id === personalPlayer;
-                    const playerScore = isPlayerA ? match.scoreA : match.scoreB;
-                    const opponentScore = isPlayerA ? match.scoreB : match.scoreA;
-                    const opponentId = isPlayerA ? match.playerB_id : match.playerA_id;
-                    const opponentName = isPlayerA ? match.playerB_name : match.playerA_name;
-                    const didWin = playerScore > opponentScore;
-
-                    if (didWin) wins++; else losses++;
-
-                    if (!opponentMap[opponentId]) {
-                        opponentMap[opponentId] = {
-                            ...getOpponentInfo(opponentId, opponentName),
-                            wins: 0,
-                            losses: 0,
-                            total: 0
-                        };
-                    }
-
-                    opponentMap[opponentId].total++;
-                    if (didWin) opponentMap[opponentId].wins++; else opponentMap[opponentId].losses++;
-                });
-
-                const opponents = Object.values(opponentMap)
+                const playerStats = statsByPlayer?.[personalPlayer] || {};
+                const opponents = Object.entries(playerStats.opponents || {})
+                    .map(([opponentId, opponentStats]) => ({
+                        ...getOpponentInfo(opponentId),
+                        total: Number(opponentStats.total) || 0,
+                        wins: Number(opponentStats.wins) || 0,
+                        losses: Number(opponentStats.losses) || 0
+                    }))
+                    .filter(opponent => opponent.total > 0)
                     .map(opponent => ({
                         ...opponent,
                         winRate: opponent.total ? Math.round((opponent.wins / opponent.total) * 100) : 0
                     }))
                     .sort((a, b) => b.total - a.total || b.wins - a.wins || a.name.localeCompare(b.name, 'ko'));
 
-                const total = wins + losses;
+                const total = Number(playerStats.total) || 0;
+                const wins = Number(playerStats.wins) || 0;
+                const losses = Number(playerStats.losses) || 0;
+
                 return {
                     total,
                     wins,
@@ -617,7 +750,7 @@
                     winRate: total ? Math.round((wins / total) * 100) : 0,
                     opponents
                 };
-            }, [personalPlayer, matches, members]);
+            }, [personalPlayer, statsByPlayer, members]);
 
             // 상대 전적에 해당하는 경기만 추려 최신순으로 표시
             const h2hMatches = useMemo(() => {
@@ -628,26 +761,27 @@
                 );
             }, [statA, statB, matches]);
 
-            // 상대 전적 계산
+            // 상대 전적 계산: h2h_stats 집계 노드를 우선 사용
             const h2hStats = useMemo(() => {
                 if (!statA || !statB) return null;
-                let aWins = 0, bWins = 0;
-                h2hMatches.forEach(m => {
-                    if (m.playerA_id === statA && m.playerB_id === statB) {
-                        if (m.scoreA > m.scoreB) aWins++; else bWins++;
-                    } else if (m.playerA_id === statB && m.playerB_id === statA) {
-                        if (m.scoreB > m.scoreA) aWins++; else bWins++;
-                    }
-                });
-                return { aWins, bWins, total: aWins + bWins };
-            }, [statA, statB, h2hMatches]);
+
+                const pairStats = h2hStatsByPair?.[makeH2hKey(statA, statB)];
+                if (!pairStats) return { aWins: 0, bWins: 0, total: 0 };
+
+                const player1Wins = Number(pairStats.player1_wins) || 0;
+                const player2Wins = Number(pairStats.player2_wins) || 0;
+                const aWins = pairStats.player1_id === statA ? player1Wins : player2Wins;
+                const bWins = pairStats.player1_id === statB ? player1Wins : player2Wins;
+
+                return { aWins, bWins, total: Number(pairStats.total) || aWins + bWins };
+            }, [statA, statB, h2hStatsByPair]);
 
             return (
                 <div className="space-y-6">
                     {/* 개인 전적 검색 */}
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                         <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
-                        <p className="text-xs font-bold text-gray-400 mb-3">조사할 선수 카드를 선택하면 전체 승률과 상대별 기록이 표시됩니다.</p>
+                        <p className="text-xs font-bold text-gray-400 mb-3">쓰기 시점에 업데이트되는 stats_by_player 집계 기준으로 전체 승률과 상대별 기록을 표시합니다.</p>
 
                         {members.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -761,7 +895,8 @@
                     {/* 선택한 상대 전적 상세 기록 */}
                     {statA && statB ? (
                         <div>
-                            <h2 className="font-extrabold text-gray-800 mb-3 text-lg px-1">🧾 상대 전적 상세 기록</h2>
+                            <h2 className="font-extrabold text-gray-800 mb-1 text-lg px-1">🧾 상대 전적 상세 기록</h2>
+                            <p className="text-[11px] font-bold text-gray-400 mb-3 px-1">아래 상세 목록은 현재 로드된 최근 경기와 더 보기로 불러온 기록 안에서만 표시됩니다.</p>
                             {h2hMatches.length > 0 ? (
                                 <ul className="space-y-2">
                                     {h2hMatches.map(m => {
@@ -789,7 +924,7 @@
                         <div className="flex items-end justify-between gap-3 mb-3 px-1">
                             <div>
                                 <h2 className="font-extrabold text-gray-800 text-lg">📅 최근 경기 기록</h2>
-                                <p className="text-[11px] font-bold text-gray-400">각 기록의 수정 또는 삭제 버튼을 눌러 바로 관리하세요.</p>
+                                <p className="text-[11px] font-bold text-gray-400">최근 {MATCH_PAGE_SIZE}건을 실시간 구독하고, 이전 경기는 더 보기로 필요할 때만 불러옵니다.</p>
                             </div>
                             <span className="shrink-0 text-xs font-black text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{matches.length}건</span>
                         </div>
@@ -893,6 +1028,19 @@
                         ) : (
                             <div className="text-center text-sm font-bold text-gray-400 py-6 bg-gray-50 rounded-xl">저장된 경기 기록이 없습니다.</div>
                         )}
+
+                        {hasMoreMatches ? (
+                            <button
+                                type="button"
+                                onClick={onLoadMoreMatches}
+                                disabled={isLoadingMoreMatches || !isAuthReady}
+                                className="mt-4 w-full bg-gray-900 disabled:bg-gray-300 text-white font-black p-3 rounded-xl shadow-md btn-press"
+                            >
+                                {isLoadingMoreMatches ? '불러오는 중...' : `이전 경기 ${MATCH_PAGE_SIZE}건 더 보기`}
+                            </button>
+                        ) : matches.length > 0 ? (
+                            <div className="mt-4 text-center text-[11px] font-bold text-gray-400">불러올 이전 경기 기록이 없습니다.</div>
+                        ) : null}
                     </div>
                 </div>
             );
