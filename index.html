@@ -901,6 +901,14 @@
         // 앱 렌더링
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(error => {
+                    console.error('서비스 워커 등록 실패:', error);
+                });
+            });
+        }
     </script>
 </body>
 </html>
