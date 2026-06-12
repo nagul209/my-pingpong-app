@@ -60,6 +60,32 @@
             return error?.message || '잠시 후 다시 시도해주세요.';
         }
 
+
+        const PLAYER_NAME_MAX_LENGTH = 30;
+        const MATCH_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+        const MATCH_SCORE_OPTIONS = [
+            { scoreA: 3, scoreB: 0 },
+            { scoreA: 3, scoreB: 1 },
+            { scoreA: 3, scoreB: 2 },
+            { scoreA: 0, scoreB: 3 },
+            { scoreA: 1, scoreB: 3 },
+            { scoreA: 2, scoreB: 3 }
+        ];
+
+        function isAllowedMatchScore(scoreA, scoreB) {
+            return MATCH_SCORE_OPTIONS.some(option => option.scoreA === scoreA && option.scoreB === scoreB);
+        }
+
+        function validateMatchPayload({ date, playerAId, playerAName, playerBId, playerBName, scoreA, scoreB }) {
+            if (!MATCH_DATE_PATTERN.test(date || '')) return '경기 날짜는 YYYY-MM-DD 형식이어야 합니다.';
+            if (!playerAId || !playerBId) return '두 선수를 모두 선택해주세요.';
+            if (playerAId === playerBId) return '서로 다른 선수를 선택해주세요.';
+            if (!isAllowedMatchScore(scoreA, scoreB)) return '허용된 세트 스코어(3:0, 3:1, 3:2, 0:3, 1:3, 2:3)만 저장할 수 있습니다.';
+            if (typeof playerAName !== 'string' || playerAName.trim().length === 0 || playerAName.length > PLAYER_NAME_MAX_LENGTH) return `선수 A 이름은 1~${PLAYER_NAME_MAX_LENGTH}자여야 합니다.`;
+            if (typeof playerBName !== 'string' || playerBName.trim().length === 0 || playerBName.length > PLAYER_NAME_MAX_LENGTH) return `선수 B 이름은 1~${PLAYER_NAME_MAX_LENGTH}자여야 합니다.`;
+            return '';
+        }
+
         // -------------------------------------------------------------
         // 2. React 메인 앱 컴포넌트
         // -------------------------------------------------------------
@@ -231,12 +257,14 @@
                 setIsSaving(true);
 
                 try {
-                    await db.ref('simple_members').push({
+                    const newMember = {
                         name: trimmedName,
                         division,
-                        joinedAt: Date.now(),
-                        createdBy: auth.currentUser?.uid || null
-                    });
+                        joinedAt: Date.now()
+                    };
+                    if (auth.currentUser?.uid) newMember.createdBy = auth.currentUser.uid;
+
+                    await db.ref('simple_members').push(newMember);
                     setName('');
                     setDivision('');
                     alert("회원이 추가되었습니다.");
@@ -295,14 +323,10 @@
             const recentSavedMatchRef = useRef({ key: '', savedAt: 0 });
             const duplicateGuardMs = 3000;
             const scoreButtonDisabledClass = 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none disabled:shadow-none';
-            const scoreButtons = [
-                { scoreA: 3, scoreB: 0, color: 'blue' },
-                { scoreA: 0, scoreB: 3, color: 'red' },
-                { scoreA: 3, scoreB: 1, color: 'blue' },
-                { scoreA: 1, scoreB: 3, color: 'red' },
-                { scoreA: 3, scoreB: 2, color: 'blue' },
-                { scoreA: 2, scoreB: 3, color: 'red' }
-            ];
+            const scoreButtons = MATCH_SCORE_OPTIONS.map(option => ({
+                ...option,
+                color: option.scoreA > option.scoreB ? 'blue' : 'red'
+            }));
 
             const selectMatchPlayer = (memberId) => {
                 if (activePlayerSlot === 'A') {
@@ -323,8 +347,19 @@
             const saveMatch = async (scoreA, scoreB) => {
                 if (isSavingMatch || isSavingMatchRef.current) return;
                 if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
-                if (!playerA || !playerB) return alert("두 선수를 모두 선택해주세요.");
-                if (playerA === playerB) return alert("서로 다른 선수를 선택해주세요.");
+
+                const nameA = members.find(m => m.id === playerA)?.name;
+                const nameB = members.find(m => m.id === playerB)?.name;
+                const validationMessage = validateMatchPayload({
+                    date,
+                    playerAId: playerA,
+                    playerAName: nameA,
+                    playerBId: playerB,
+                    playerBName: nameB,
+                    scoreA,
+                    scoreB
+                });
+                if (validationMessage) return alert(validationMessage);
 
                 const matchKey = [date, playerA, playerB, scoreA, scoreB].join('|');
                 const now = Date.now();
@@ -332,21 +367,20 @@
                     return alert('방금 저장한 동일 경기입니다. 잠시 후 다시 시도해주세요.');
                 }
 
-                const nameA = members.find(m => m.id === playerA)?.name;
-                const nameB = members.find(m => m.id === playerB)?.name;
-
                 setIsSavingMatch(true);
                 isSavingMatchRef.current = true;
 
                 try {
-                    await db.ref('simple_matches').push({
+                    const newMatch = {
                         date,
                         playerA_id: playerA, playerA_name: nameA,
                         playerB_id: playerB, playerB_name: nameB,
                         scoreA, scoreB,
-                        timestamp: Date.now(),
-                        createdBy: auth.currentUser?.uid || null
-                    });
+                        timestamp: Date.now()
+                    };
+                    if (auth.currentUser?.uid) newMatch.createdBy = auth.currentUser.uid;
+
+                    await db.ref('simple_matches').push(newMatch);
 
                     recentSavedMatchRef.current = { key: matchKey, savedAt: Date.now() };
                     alert(`${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!`);
@@ -428,14 +462,7 @@
                 };
             };
 
-            const SCORE_OPTIONS = [
-                { scoreA: 3, scoreB: 0 },
-                { scoreA: 3, scoreB: 1 },
-                { scoreA: 3, scoreB: 2 },
-                { scoreA: 0, scoreB: 3 },
-                { scoreA: 1, scoreB: 3 },
-                { scoreA: 2, scoreB: 3 }
-            ];
+            const SCORE_OPTIONS = MATCH_SCORE_OPTIONS;
 
             const getMemberName = (memberId, fallbackName) => members.find(member => member.id === memberId)?.name || fallbackName || '선수';
 
@@ -462,20 +489,24 @@
 
             const updateMatch = async (match) => {
                 if (!isAuthReady) return alert('Firebase 연결이 완료된 후 다시 시도해주세요.');
-                if (!editDate) return alert('경기 날짜를 선택해주세요.');
-                if (!editPlayerA || !editPlayerB) return alert('두 선수를 모두 선택해주세요.');
-                if (editPlayerA === editPlayerB) return alert('서로 다른 선수를 선택해주세요.');
-                if (editScoreA === editScoreB) return alert('무승부 기록은 저장할 수 없습니다.');
 
-                const { id, ...storedMatch } = match;
                 const nameA = getMemberName(editPlayerA, match.playerA_id === editPlayerA ? match.playerA_name : '선수 A');
                 const nameB = getMemberName(editPlayerB, match.playerB_id === editPlayerB ? match.playerB_name : '선수 B');
+                const validationMessage = validateMatchPayload({
+                    date: editDate,
+                    playerAId: editPlayerA,
+                    playerAName: nameA,
+                    playerBId: editPlayerB,
+                    playerBName: nameB,
+                    scoreA: editScoreA,
+                    scoreB: editScoreB
+                });
+                if (validationMessage) return alert(validationMessage);
 
                 setSavingMatchId(match.id);
 
                 try {
-                    await db.ref(`simple_matches/${match.id}`).set({
-                        ...storedMatch,
+                    const updatedMatch = {
                         date: editDate,
                         playerA_id: editPlayerA,
                         playerA_name: nameA,
@@ -484,9 +515,12 @@
                         scoreA: editScoreA,
                         scoreB: editScoreB,
                         timestamp: match.timestamp || Date.now(),
-                        updatedAt: Date.now(),
-                        updatedBy: auth.currentUser?.uid || null
-                    });
+                        updatedAt: Date.now()
+                    };
+                    if (match.createdBy) updatedMatch.createdBy = match.createdBy;
+                    if (auth.currentUser?.uid) updatedMatch.updatedBy = auth.currentUser.uid;
+
+                    await db.ref(`simple_matches/${match.id}`).set(updatedMatch);
                     cancelEditMatch();
                     alert('경기 기록이 수정되었습니다.');
                 } catch (error) {
