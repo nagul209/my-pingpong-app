@@ -294,6 +294,15 @@
             const isSavingMatchRef = useRef(false);
             const recentSavedMatchRef = useRef({ key: '', savedAt: 0 });
             const duplicateGuardMs = 3000;
+            const scoreButtonDisabledClass = 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none disabled:shadow-none';
+            const scoreButtons = [
+                { scoreA: 3, scoreB: 0, color: 'blue' },
+                { scoreA: 0, scoreB: 3, color: 'red' },
+                { scoreA: 3, scoreB: 1, color: 'blue' },
+                { scoreA: 1, scoreB: 3, color: 'red' },
+                { scoreA: 3, scoreB: 2, color: 'blue' },
+                { scoreA: 2, scoreB: 3, color: 'red' }
+            ];
 
             const selectMatchPlayer = (memberId) => {
                 if (activePlayerSlot === 'A') {
@@ -370,13 +379,22 @@
                     <div className="mt-4">
                         <p className="text-center text-xs font-bold text-gray-400 mb-3">👇 경기 결과를 터치하면 즉시 저장됩니다</p>
                         <div className="grid grid-cols-2 gap-3">
-                            {/* A 승리 버튼들 */}
-                            <button onClick={() => saveMatch(3, 0)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-blue-100 hover:bg-blue-50 text-blue-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">3 : 0 승리</button>
-                            <button onClick={() => saveMatch(0, 3)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-red-100 hover:bg-red-50 text-red-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">0 : 3 승리</button>
-                            <button onClick={() => saveMatch(3, 1)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-blue-100 hover:bg-blue-50 text-blue-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">3 : 1 승리</button>
-                            <button onClick={() => saveMatch(1, 3)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-red-100 hover:bg-red-50 text-red-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">1 : 3 승리</button>
-                            <button onClick={() => saveMatch(3, 2)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-blue-100 hover:bg-blue-50 text-blue-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">3 : 2 승리</button>
-                            <button onClick={() => saveMatch(2, 3)} disabled={isSavingMatch || !isAuthReady} className="bg-white border-2 border-red-100 hover:bg-red-50 text-red-700 font-black text-2xl py-6 rounded-2xl shadow-sm btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none">2 : 3 승리</button>
+                            {scoreButtons.map(({ scoreA, scoreB, color }) => {
+                                const colorClass = color === 'blue'
+                                    ? 'border-blue-100 hover:bg-blue-50 text-blue-700'
+                                    : 'border-red-100 hover:bg-red-50 text-red-700';
+
+                                return (
+                                    <button
+                                        key={`${scoreA}-${scoreB}`}
+                                        onClick={() => saveMatch(scoreA, scoreB)}
+                                        disabled={isSavingMatch || !isAuthReady}
+                                        className={`bg-white border-2 ${colorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${scoreButtonDisabledClass}`}
+                                    >
+                                        {scoreA} : {scoreB} 승리
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
