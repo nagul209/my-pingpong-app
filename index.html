@@ -76,6 +76,26 @@
         ];
         const MATCH_PAGE_SIZE = 50;
 
+        // 공통 Tailwind 클래스와 색상 역할 정의
+        // primary=blue, opponent=red, success=emerald, neutral=gray
+        const APP_CARD_CLASS = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-100';
+        const APP_CARD_COMPACT_CLASS = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100';
+        const APP_CARD_TIGHT_CLASS = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100';
+        const EMPTY_STATE_CLASS = 'text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl';
+        const FORM_CONTROL_CLASS = 'w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none';
+        const DATE_INPUT_CLASS = 'w-full bg-white border border-gray-200 text-center font-bold text-gray-700 p-3 rounded-xl shadow-sm outline-none';
+        const PRIMARY_BUTTON_CLASS = 'bg-blue-600 text-white font-black p-3 rounded-xl shadow-md btn-press disabled:bg-gray-400 disabled:cursor-not-allowed';
+        const DANGER_BUTTON_CLASS = 'bg-red-50 text-red-600 btn-press disabled:opacity-50 disabled:cursor-not-allowed';
+        const NEUTRAL_BUTTON_CLASS = 'bg-gray-900 text-white font-black p-3 rounded-xl shadow-md btn-press disabled:bg-gray-300 disabled:cursor-not-allowed';
+        const PLAYER_A_CARD_CLASS = 'bg-blue-50 border-blue-100 text-blue-800';
+        const PLAYER_A_CARD_ACTIVE_CLASS = 'bg-blue-600 border-blue-600 text-white shadow-md';
+        const PLAYER_B_CARD_CLASS = 'bg-red-50 border-red-100 text-red-800';
+        const PLAYER_B_CARD_ACTIVE_CLASS = 'bg-red-600 border-red-600 text-white shadow-md';
+        const PLAYER_SELECT_BUTTON_CLASS = 'min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition';
+        const SELECTED_BUTTON_CLASS = 'bg-gray-900 border-gray-900 text-white';
+        const SUCCESS_SELECT_BUTTON_CLASS = 'bg-white border-emerald-100 text-gray-800 hover:bg-emerald-50';
+        const SCORE_BUTTON_DISABLED_CLASS = 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none disabled:shadow-none';
+
         function sortMatchesByRecent(matchList) {
             return [...matchList].sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
         }
@@ -364,12 +384,12 @@
             const getName = (id, fallback) => members.find(m => m.id === id)?.name || fallback;
 
             return (
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className={`${APP_CARD_COMPACT_CLASS} space-y-4`}>
                     <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                         <button
                             type="button"
                             onClick={() => onActiveSlotChange('A')}
-                            className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'A' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-blue-50 border-blue-100 text-blue-800'}`}
+                            className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'A' ? PLAYER_A_CARD_ACTIVE_CLASS : PLAYER_A_CARD_CLASS}`}
                         >
                             <div className="text-[10px] font-black opacity-70 mb-1">{labels.a}</div>
                             <div className="font-black text-lg truncate">{getName(selectedA, '선택')}</div>
@@ -378,7 +398,7 @@
                         <button
                             type="button"
                             onClick={() => onActiveSlotChange('B')}
-                            className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'B' ? 'bg-red-600 border-red-600 text-white shadow-md' : 'bg-red-50 border-red-100 text-red-800'}`}
+                            className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'B' ? PLAYER_B_CARD_ACTIVE_CLASS : PLAYER_B_CARD_CLASS}`}
                         >
                             <div className="text-[10px] font-black opacity-70 mb-1">{labels.b}</div>
                             <div className="font-black text-lg truncate">{getName(selectedB, '선택')}</div>
@@ -400,7 +420,7 @@
                                             key={member.id}
                                             type="button"
                                             onClick={() => onSelect(member.id)}
-                                            className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-gray-900 border-gray-900 text-white' : activeSlot === 'A' ? 'bg-white border-blue-100 text-gray-800 hover:bg-blue-50' : 'bg-white border-red-100 text-gray-800 hover:bg-red-50'}`}
+                                            className={`${PLAYER_SELECT_BUTTON_CLASS} ${isSelected ? SELECTED_BUTTON_CLASS : activeSlot === 'A' ? 'bg-white border-blue-100 text-gray-800 hover:bg-blue-50' : 'bg-white border-red-100 text-gray-800 hover:bg-red-50'}`}
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="font-black text-base truncate">{member.name}</span>
@@ -413,7 +433,7 @@
                                 })}
                             </div>
                         ) : (
-                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">등록된 회원이 없습니다.</div>
+                            <div className={EMPTY_STATE_CLASS}>등록된 회원이 없습니다.</div>
                         )}
                     </div>
                 </div>
@@ -460,15 +480,15 @@
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-4 text-lg">➕ 새 회원 등록</h2>
                         <div className="space-y-3">
-                            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름" className="w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
-                            <select value={division} onChange={e => setDivision(e.target.value)} className="w-full bg-gray-50 border-0 p-3 rounded-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름" className={FORM_CONTROL_CLASS} />
+                            <select value={division} onChange={e => setDivision(e.target.value)} className={FORM_CONTROL_CLASS}>
                                 <option value="" disabled>부수를 선택하세요</option>
                                 {DIVISION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                             </select>
-                            <button onClick={addMember} disabled={isSaving || !isAuthReady} className={`w-full font-bold p-3 rounded-xl shadow-md btn-press ${isSaving || !isAuthReady ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white'}`}>
+                            <button onClick={addMember} disabled={isSaving || !isAuthReady} className={`w-full ${PRIMARY_BUTTON_CLASS} ${isSaving || !isAuthReady ? '' : 'disabled:bg-gray-400'}`}>
                                 {isSaving ? '저장 중...' : isAuthReady ? '등록하기' : '연결 중...'}
                             </button>
                         </div>
@@ -478,7 +498,7 @@
                         <h2 className="font-extrabold text-gray-800 mb-3 text-lg px-1">📋 회원 목록 ({members.length}명)</h2>
                         <ul className="space-y-2">
                             {members.map(m => (
-                                <li key={m.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                                <li key={m.id} className={`${APP_CARD_COMPACT_CLASS} flex justify-between items-center`}>
                                     <span className="font-bold text-gray-800 text-lg">{m.name}</span>
                                     <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
                                         {m.division || '부수 미입력'}
@@ -504,7 +524,6 @@
             const isSavingMatchRef = useRef(false);
             const recentSavedMatchRef = useRef({ key: '', savedAt: 0 });
             const duplicateGuardMs = 3000;
-            const scoreButtonDisabledClass = 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:transform-none disabled:shadow-none';
             const scoreButtons = MATCH_SCORE_OPTIONS.map(option => ({
                 ...option,
                 color: option.scoreA > option.scoreB ? 'blue' : 'red'
@@ -581,7 +600,7 @@
             return (
                 <div className="flex flex-col gap-5 h-full">
                     {/* 날짜 */}
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-white border border-gray-200 text-center font-bold text-gray-700 p-3 rounded-xl shadow-sm outline-none" />
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className={DATE_INPUT_CLASS} />
 
                     {/* 선수 선택 */}
                     <PlayerCardSelector
@@ -607,7 +626,7 @@
                                         key={`${scoreA}-${scoreB}`}
                                         onClick={() => saveMatch(scoreA, scoreB)}
                                         disabled={isSavingMatch || !isAuthReady}
-                                        className={`bg-white border-2 ${colorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${scoreButtonDisabledClass}`}
+                                        className={`bg-white border-2 ${colorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
                                     >
                                         {scoreA} : {scoreB} 승리
                                     </button>
@@ -813,7 +832,7 @@
             return (
                 <div className="space-y-6">
                     {/* 개인 전적 검색 */}
-                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
                         <p className="text-xs font-bold text-gray-400 mb-3">쓰기 시점에 업데이트되는 stats_by_player 집계 기준으로 전체 승률과 상대별 기록을 표시합니다.</p>
 
@@ -826,7 +845,7 @@
                                             key={member.id}
                                             type="button"
                                             onClick={() => setPersonalPlayer(member.id)}
-                                            className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-100 text-gray-800 hover:bg-emerald-50'}`}
+                                            className={`${PLAYER_SELECT_BUTTON_CLASS} ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : SUCCESS_SELECT_BUTTON_CLASS}`}
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="font-black text-base truncate">{member.name}</span>
@@ -839,7 +858,7 @@
                                 })}
                             </div>
                         ) : (
-                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">등록된 회원이 없습니다.</div>
+                            <div className={EMPTY_STATE_CLASS}>등록된 회원이 없습니다.</div>
                         )}
 
                         {personalPlayer && personalStats ? (
@@ -889,7 +908,7 @@
                                             ))}
                                         </ul>
                                     ) : (
-                                        <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">이 선수의 경기 기록이 없습니다.</div>
+                                        <div className={EMPTY_STATE_CLASS}>이 선수의 경기 기록이 없습니다.</div>
                                     )}
                                 </div>
                             </div>
@@ -897,7 +916,7 @@
                     </div>
 
                     {/* 상대 전적 검색 */}
-                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-4 text-lg">⚔️ 상대 전적 비교</h2>
                         <div className="mb-4">
                             <PlayerCardSelector
@@ -922,7 +941,7 @@
                                 </div>
                             </div>
                         ) : (statA && statB) ? (
-                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">전적 기록이 없습니다.</div>
+                            <div className={EMPTY_STATE_CLASS}>전적 기록이 없습니다.</div>
                         ) : null}
                     </div>
 
@@ -936,7 +955,7 @@
                                     {h2hMatches.map(m => {
                                         const aWon = m.scoreA > m.scoreB;
                                         return (
-                                            <li key={m.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 text-sm">
+                                            <li key={m.id} className={`${APP_CARD_TIGHT_CLASS} flex items-center gap-3 text-sm`}>
                                                 <span className="shrink-0 text-[11px] font-black text-gray-400">{m.date}</span>
                                                 <div className="min-w-0 flex-1 flex items-center justify-between gap-2 font-extrabold text-gray-700">
                                                     <span className={`min-w-0 flex-1 truncate ${aWon ? 'text-blue-600' : 'text-gray-600'}`}>{aWon ? '🏆 ' : ''}{m.playerA_name}</span>
@@ -948,7 +967,7 @@
                                     })}
                                 </ul>
                             ) : (
-                                <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">선택한 선수들의 경기 기록이 없습니다.</div>
+                                <div className={EMPTY_STATE_CLASS}>선택한 선수들의 경기 기록이 없습니다.</div>
                             )}
                         </div>
                     ) : null}
@@ -972,7 +991,7 @@
                                     const playerBOptions = getPlayerOptions(m.playerB_id, m.playerB_name);
 
                                     return (
-                                        <li key={m.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                                        <li key={m.id} className={`${APP_CARD_COMPACT_CLASS} flex flex-col gap-3`}>
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="text-[10px] font-bold text-gray-400">{m.date}</div>
                                                 <div className="flex gap-2">
@@ -988,7 +1007,7 @@
                                                         type="button"
                                                         onClick={() => deleteMatch(m)}
                                                         disabled={isSaving}
-                                                        className="text-[11px] font-black px-3 py-1 rounded-full bg-red-50 text-red-600 btn-press disabled:opacity-50"
+                                                        className={`text-[11px] font-black px-3 py-1 rounded-full ${DANGER_BUTTON_CLASS}`}
                                                     >
                                                         삭제
                                                     </button>
@@ -1049,7 +1068,7 @@
                                                         type="button"
                                                         onClick={() => updateMatch(m)}
                                                         disabled={isSaving || !isAuthReady}
-                                                        className="w-full bg-blue-600 disabled:bg-gray-400 text-white font-black p-3 rounded-xl shadow-md btn-press"
+                                                        className={`w-full ${PRIMARY_BUTTON_CLASS}`}
                                                     >
                                                         {isSaving ? '저장 중...' : '수정 저장'}
                                                     </button>
@@ -1068,7 +1087,7 @@
                                 type="button"
                                 onClick={onLoadMoreMatches}
                                 disabled={isLoadingMoreMatches || !isAuthReady}
-                                className="mt-4 w-full bg-gray-900 disabled:bg-gray-300 text-white font-black p-3 rounded-xl shadow-md btn-press"
+                                className={`mt-4 w-full ${NEUTRAL_BUTTON_CLASS}`}
                             >
                                 {isLoadingMoreMatches ? '불러오는 중...' : `이전 경기 ${MATCH_PAGE_SIZE}건 더 보기`}
                             </button>
