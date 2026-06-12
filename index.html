@@ -712,10 +712,20 @@
             const isSavingMatchRef = useRef(false);
             const recentSavedMatchRef = useRef({ key: '', savedAt: 0 });
             const duplicateGuardMs = 3000;
-            const scoreButtons = MATCH_SCORE_OPTIONS.map(option => ({
-                ...option,
-                color: option.scoreA > option.scoreB ? 'blue' : 'red'
-            }));
+            const isScoreSelectionReady = Boolean(playerA && playerB);
+            const getSelectedPlayerName = (memberId, fallback) => members.find(member => member.id === memberId)?.name || fallback;
+            const scoreButtons = MATCH_SCORE_OPTIONS.map(option => {
+                const isPlayerAWinner = option.scoreA > option.scoreB;
+
+                return {
+                    ...option,
+                    color: isPlayerAWinner ? 'blue' : 'red',
+                    winnerSlot: isPlayerAWinner ? 'A' : 'B',
+                    winnerName: isPlayerAWinner
+                        ? getSelectedPlayerName(playerA, '선수 A')
+                        : getSelectedPlayerName(playerB, '선수 B')
+                };
+            });
 
             const selectMatchPlayer = (memberId) => {
                 if (activePlayerSlot === 'A') {
@@ -817,7 +827,7 @@
                                         key={`${scoreA}-${scoreB}`}
                                         onClick={() => saveMatch(scoreA, scoreB)}
                                         disabled={isSavingMatch || !isAuthReady}
-                                        className={`bg-white border-2 ${colorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
+                                        className={`bg-white border-2 ${colorClass} ${disabledColorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
                                     >
                                         <span className="text-[11px] font-black uppercase tracking-[0.18em] opacity-75">선수 {winnerSlot} 승리</span>
                                         <span className="text-3xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
