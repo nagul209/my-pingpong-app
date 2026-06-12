@@ -726,10 +726,13 @@
                     <div className="mt-4">
                         <p className="text-center text-xs font-bold text-gray-400 mb-3">👇 경기 결과를 터치하면 즉시 저장됩니다</p>
                         <div className="grid grid-cols-2 gap-3">
-                            {scoreButtons.map(({ scoreA, scoreB, color }) => {
+                            {scoreButtons.map(({ scoreA, scoreB, color, winnerSlot, winnerName }) => {
                                 const colorClass = color === 'blue'
-                                    ? 'border-blue-100 hover:bg-blue-50 text-blue-700'
-                                    : 'border-red-100 hover:bg-red-50 text-red-700';
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-md hover:bg-blue-700'
+                                    : 'bg-red-600 border-red-600 text-white shadow-md hover:bg-red-700';
+                                const disabledColorClass = color === 'blue'
+                                    ? 'disabled:bg-blue-50 disabled:border-blue-100 disabled:text-blue-300'
+                                    : 'disabled:bg-red-50 disabled:border-red-100 disabled:text-red-300';
 
                                 return (
                                     <button
@@ -738,7 +741,11 @@
                                         disabled={isSavingMatch || !isAuthReady}
                                         className={`bg-white border-2 ${colorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
                                     >
-                                        {scoreA} : {scoreB} 승리
+                                        <span className="text-[11px] font-black uppercase tracking-[0.18em] opacity-75">선수 {winnerSlot} 승리</span>
+                                        <span className="text-3xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
+                                        <span className="min-h-[1.25rem] text-sm font-black leading-snug">
+                                            {isScoreSelectionReady ? `${winnerName} 승리 · ${scoreA}:${scoreB}` : '선수를 먼저 선택하세요'}
+                                        </span>
                                     </button>
                                 );
                             })}
