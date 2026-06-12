@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Pretendard', sans-serif;
+    background-color: #f8fafc;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .btn-press:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+  }
+}
