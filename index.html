@@ -951,7 +951,7 @@
                     {/* 개인 전적 검색 */}
                     <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
-                        <p className="text-xs font-bold text-gray-400 mb-3">쓰기 시점에 업데이트되는 stats_by_player 집계 기준으로 전체 승률과 상대별 기록을 표시합니다.</p>
+                        <p className="text-xs font-bold text-gray-400 mb-3">선수를 선택하면 전체 승률과 상대별 전적을 볼 수 있습니다.</p>
 
                         {members.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -1066,7 +1066,7 @@
                     {statA && statB ? (
                         <div>
                             <h2 className="font-extrabold text-gray-800 mb-1 text-lg px-1">🧾 상대 전적 상세 기록</h2>
-                            <p className="text-[11px] font-bold text-gray-400 mb-3 px-1">아래 상세 목록은 현재 로드된 최근 경기와 더 보기로 불러온 기록 안에서만 표시됩니다.</p>
+                            <p className="text-[11px] font-bold text-gray-400 mb-3 px-1">더 오래된 기록은 아래 ‘더 보기’로 불러올 수 있습니다.</p>
                             {h2hMatches.length > 0 ? (
                                 <ul className="space-y-2">
                                     {h2hMatches.map(m => {
@@ -1094,7 +1094,7 @@
                         <div className="flex items-end justify-between gap-3 mb-3 px-1">
                             <div>
                                 <h2 className="font-extrabold text-gray-800 text-lg">📅 최근 경기 기록</h2>
-                                <p className="text-[11px] font-bold text-gray-400">최근 {MATCH_PAGE_SIZE}건을 실시간 구독하고, 이전 경기는 더 보기로 필요할 때만 불러옵니다.</p>
+                                <p className="text-[11px] font-bold text-gray-400">최신 경기부터 표시됩니다.</p>
                             </div>
                             <span className="shrink-0 text-xs font-black text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{matches.length}건</span>
                         </div>
