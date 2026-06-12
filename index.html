@@ -827,13 +827,14 @@
                                         key={`${scoreA}-${scoreB}`}
                                         onClick={() => saveMatch(scoreA, scoreB)}
                                         disabled={isSavingMatch || !isAuthReady}
-                                        className={`bg-white border-2 ${colorClass} ${disabledColorClass} font-black text-2xl py-6 rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
+                                        className={`bg-white border-2 ${colorClass} ${disabledColorClass} flex min-h-[8.75rem] flex-col items-center justify-center gap-2 px-3 py-5 text-center font-black rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
                                     >
                                         <span className="text-[11px] font-black uppercase tracking-[0.18em] opacity-75">선수 {winnerSlot} 승리</span>
-                                        <span className="text-3xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
-                                        <span className="min-h-[1.25rem] text-sm font-black leading-snug">
-                                            {isScoreSelectionReady ? `${winnerName} 승리 · ${scoreA}:${scoreB}` : '선수를 먼저 선택하세요'}
+                                        <span className="text-4xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
+                                        <span className="min-h-[1.25rem] max-w-full truncate text-sm font-black leading-snug">
+                                            {isScoreSelectionReady ? `${winnerName} 승리` : '선수를 먼저 선택하세요'}
                                         </span>
+                                        <span className="text-xs font-black opacity-80">· {scoreA}:{scoreB}</span>
                                     </button>
                                 );
                             })}
