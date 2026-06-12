@@ -329,6 +329,116 @@
         }
 
 
+        function getMemberInitials(member) {
+            const name = (member?.name || '').trim();
+            if (!name) return '?';
+
+            const nameParts = name.split(/\s+/).filter(Boolean);
+            if (nameParts.length >= 2) {
+                return nameParts.slice(0, 2).map(part => Array.from(part)[0]).join('').toUpperCase();
+            }
+
+            return Array.from(name)[0].toUpperCase();
+        }
+
+        function filterMembersByQuery(members, query) {
+            const normalizedQuery = query.trim().toLowerCase();
+            if (!normalizedQuery) return members;
+
+            return members.filter(member => {
+                const name = (member.name || '').toLowerCase();
+                const division = (member.division || '').toLowerCase();
+                return name.includes(normalizedQuery) || division.includes(normalizedQuery);
+            });
+        }
+
+        function PlayerSearchList({
+            members,
+            selectedIds = [],
+            onSelect,
+            getTone = () => 'blue',
+            getMetaLabel = member => member.division || '부수',
+            searchPlaceholder = '이름 또는 부수로 검색',
+            emptyMessage = '등록된 회원이 없습니다.',
+            noResultsMessage = '검색 결과가 없습니다.'
+        }) {
+            const [searchQuery, setSearchQuery] = useState('');
+            const filteredMembers = useMemo(() => filterMembersByQuery(members, searchQuery), [members, searchQuery]);
+
+            const toneClasses = {
+                blue: {
+                    border: 'border-blue-100 hover:bg-blue-50',
+                    badge: 'bg-blue-50 text-blue-700',
+                    avatar: 'bg-blue-100 text-blue-700'
+                },
+                red: {
+                    border: 'border-red-100 hover:bg-red-50',
+                    badge: 'bg-red-50 text-red-700',
+                    avatar: 'bg-red-100 text-red-700'
+                },
+                emerald: {
+                    border: 'border-emerald-100 hover:bg-emerald-50',
+                    badge: 'bg-emerald-50 text-emerald-700',
+                    avatar: 'bg-emerald-100 text-emerald-700'
+                }
+            };
+
+            return (
+                <div className="space-y-3">
+                    <label className="relative block">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔎</span>
+                        <input
+                            type="search"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder={searchPlaceholder}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-9 pr-3 text-sm font-bold text-gray-700 outline-none focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                        />
+                    </label>
+
+                    {members.length > 0 ? (
+                        filteredMembers.length > 0 ? (
+                            <div className="max-h-72 overflow-y-auto pr-1">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {filteredMembers.map(member => {
+                                        const selectedIndex = selectedIds.indexOf(member.id);
+                                        const isSelected = selectedIndex > -1;
+                                        const metaLabel = getMetaLabel(member, selectedIndex);
+                                        const tone = toneClasses[getTone(member, selectedIndex)] || toneClasses.blue;
+
+                                        return (
+                                            <button
+                                                key={member.id}
+                                                type="button"
+                                                onClick={() => onSelect(member.id)}
+                                                className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-gray-900 border-gray-900 text-white' : `bg-white ${tone.border} text-gray-800`}`}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-full text-sm font-black ${isSelected ? 'bg-white/20 text-white' : tone.avatar}`}>
+                                                        {getMemberInitials(member)}
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block font-black text-base truncate">{member.name}</span>
+                                                        <span className={`mt-1 inline-block max-w-full truncate text-[10px] font-black px-2 py-1 rounded-full ${isSelected ? 'bg-white/20 text-white' : tone.badge}`}>
+                                                            {metaLabel}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">{noResultsMessage}</div>
+                        )
+                    ) : (
+                        <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">{emptyMessage}</div>
+                    )}
+                </div>
+            );
+        }
+
         function PlayerCardSelector({ members, selectedA, selectedB, activeSlot, onActiveSlotChange, onSelect, labels = { a: '선수 A', b: '선수 B' } }) {
             const getName = (id, fallback) => members.find(m => m.id === id)?.name || fallback;
 
@@ -358,32 +468,15 @@
                         <p className="text-xs font-bold text-gray-400 mb-2 text-center">
                             {activeSlot === 'A' ? `${labels.a}를 선택하세요. 선택 후 바로 ${labels.b}를 고를 수 있습니다.` : `${labels.b}를 선택하세요.`}
                         </p>
-                        {members.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-2">
-                                {members.map(member => {
-                                    const isSelectedA = selectedA === member.id;
-                                    const isSelectedB = selectedB === member.id;
-                                    const isSelected = isSelectedA || isSelectedB;
-                                    return (
-                                        <button
-                                            key={member.id}
-                                            type="button"
-                                            onClick={() => onSelect(member.id)}
-                                            className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-gray-900 border-gray-900 text-white' : activeSlot === 'A' ? 'bg-white border-blue-100 text-gray-800 hover:bg-blue-50' : 'bg-white border-red-100 text-gray-800 hover:bg-red-50'}`}
-                                        >
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="font-black text-base truncate">{member.name}</span>
-                                                <span className={`shrink-0 text-[10px] font-black px-2 py-1 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                                    {isSelectedA ? labels.a : isSelectedB ? labels.b : member.division || '부수'}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">등록된 회원이 없습니다.</div>
-                        )}
+                        <PlayerSearchList
+                            members={members}
+                            selectedIds={[selectedA, selectedB]}
+                            onSelect={onSelect}
+                            getTone={() => activeSlot === 'A' ? 'blue' : 'red'}
+                            getMetaLabel={(member, selectedIndex) => selectedIndex === 0 ? labels.a : selectedIndex === 1 ? labels.b : member.division || '부수'}
+                            searchPlaceholder="이름 또는 부수로 선수 검색"
+                            noResultsMessage="검색 조건에 맞는 선수가 없습니다."
+                        />
                     </div>
                 </div>
             );
@@ -786,30 +879,16 @@
                         <h2 className="font-extrabold text-gray-800 mb-2 text-lg">👤 개인 전적 기록</h2>
                         <p className="text-xs font-bold text-gray-400 mb-3">쓰기 시점에 업데이트되는 stats_by_player 집계 기준으로 전체 승률과 상대별 기록을 표시합니다.</p>
 
-                        {members.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-2 mb-4">
-                                {members.map(member => {
-                                    const isSelected = personalPlayer === member.id;
-                                    return (
-                                        <button
-                                            key={member.id}
-                                            type="button"
-                                            onClick={() => setPersonalPlayer(member.id)}
-                                            className={`min-w-0 text-left p-3 rounded-xl border-2 shadow-sm btn-press transition ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-100 text-gray-800 hover:bg-emerald-50'}`}
-                                        >
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="font-black text-base truncate">{member.name}</span>
-                                                <span className={`shrink-0 text-[10px] font-black px-2 py-1 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
-                                                    {member.division || '부수'}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="text-center text-sm font-bold text-gray-400 py-4 bg-gray-50 rounded-xl">등록된 회원이 없습니다.</div>
-                        )}
+                        <div className="mb-4">
+                            <PlayerSearchList
+                                members={members}
+                                selectedIds={personalPlayer ? [personalPlayer] : []}
+                                onSelect={setPersonalPlayer}
+                                getTone={() => 'emerald'}
+                                searchPlaceholder="이름 또는 부수로 개인 전적 선수 검색"
+                                noResultsMessage="검색 조건에 맞는 선수가 없습니다."
+                            />
+                        </div>
 
                         {personalPlayer && personalStats ? (
                             <div className="space-y-4">
