@@ -987,9 +987,19 @@ ${getFirebaseErrorMessage(error)}` });
 
             const selectMatchPlayer = (memberId) => {
                 if (activePlayerSlot === 'A') {
+                    if (memberId === playerA) {
+                        setPlayerA('');
+                        return;
+                    }
+
                     setPlayerA(memberId);
                     if (memberId === playerB) setPlayerB('');
                     setActivePlayerSlot('B');
+                    return;
+                }
+
+                if (memberId === playerB) {
+                    setPlayerB('');
                     return;
                 }
 
