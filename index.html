@@ -200,6 +200,39 @@
             );
         }
 
+        function MemberDeleteConfirmModal({ member, isDeleting, onCancel, onDelete }) {
+            if (!member) return null;
+
+            return (
+                <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/50 px-4 pb-24 pt-8 sm:items-center sm:pb-8" role="dialog" aria-modal="true" aria-labelledby="delete-member-title">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl">
+                        <div className="mb-4">
+                            <p className="text-xs font-black text-red-500">회원 삭제</p>
+                            <h2 id="delete-member-title" className="mt-1 text-xl font-black text-gray-900">이 회원을 삭제할까요?</h2>
+                            <p className="mt-1 text-sm font-bold text-gray-500">회원 목록에서만 삭제되며, 기존 경기 기록은 유지됩니다.</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 text-lg font-black text-red-700">{getMemberInitials(member)}</span>
+                                <div className="min-w-0">
+                                    <div className="truncate text-lg font-black text-gray-900">{member.name}</div>
+                                    <div className="mt-1 inline-block rounded-full bg-white px-2 py-1 text-xs font-black text-gray-500">{member.division || '부수 미입력'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-2 gap-3">
+                            <button type="button" onClick={onCancel} disabled={isDeleting} className="rounded-2xl bg-gray-100 p-3 font-black text-gray-700 btn-press disabled:opacity-50">취소</button>
+                            <button type="button" onClick={() => onDelete(member)} disabled={isDeleting} className="rounded-2xl bg-red-600 p-3 font-black text-white shadow-md btn-press disabled:bg-gray-400">
+                                {isDeleting ? '삭제 중...' : '삭제'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function DeleteConfirmModal({ match, isDeleting, onCancel, onDelete }) {
             if (!match) return null;
 
@@ -636,13 +669,26 @@
             const [name, setName] = useState('');
             const [division, setDivision] = useState('');
             const [isSaving, setIsSaving] = useState(false);
+            const [editingMemberId, setEditingMemberId] = useState('');
+            const [editName, setEditName] = useState('');
+            const [editDivision, setEditDivision] = useState('');
+            const [savingMemberId, setSavingMemberId] = useState('');
+            const [pendingDeleteMember, setPendingDeleteMember] = useState(null);
+
+            const validateMemberForm = (memberName, memberDivision) => {
+                const trimmedName = memberName.trim();
+                if (!isAuthReady) return 'Firebase 연결이 완료된 후 다시 시도해주세요.';
+                if (!trimmedName) return '이름을 입력해주세요.';
+                if (trimmedName.length > PLAYER_NAME_MAX_LENGTH) return `이름은 ${PLAYER_NAME_MAX_LENGTH}자 이하로 입력해주세요.`;
+                if (!memberDivision) return '부수를 선택해주세요.';
+                if (!DIVISION_OPTIONS.includes(memberDivision)) return '올바른 부수를 선택해주세요.';
+                return '';
+            };
 
             const addMember = async () => {
                 const trimmedName = name.trim();
-
-                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
-                if (!trimmedName) return onToast({ type: 'error', message: '이름을 입력해주세요.' });
-                if (!division) return onToast({ type: 'error', message: '부수를 선택해주세요.' });
+                const validationMessage = validateMemberForm(name, division);
+                if (validationMessage) return onToast({ type: 'error', message: validationMessage });
 
                 setIsSaving(true);
 
@@ -660,18 +706,90 @@
                     onToast({ type: 'success', message: '회원이 추가되었습니다.' });
                 } catch (error) {
                     console.error('회원 저장 실패:', error);
-                    onToast({ type: 'error', message: `회원 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
+                    onToast({ type: 'error', message: `회원 저장에 실패했습니다.
+${getFirebaseErrorMessage(error)}` });
                 } finally {
                     setIsSaving(false);
                 }
             };
 
+            const startEditMember = (member) => {
+                setEditingMemberId(member.id);
+                setEditName(member.name || '');
+                setEditDivision(member.division || '');
+            };
+
+            const cancelEditMember = () => {
+                setEditingMemberId('');
+                setEditName('');
+                setEditDivision('');
+                setSavingMemberId('');
+            };
+
+            const updateMember = async (member) => {
+                const trimmedName = editName.trim();
+                const validationMessage = validateMemberForm(editName, editDivision);
+                if (validationMessage) return onToast({ type: 'error', message: validationMessage });
+
+                setSavingMemberId(member.id);
+
+                try {
+                    const updatedMember = {
+                        name: trimmedName,
+                        division: editDivision,
+                        joinedAt: member.joinedAt || Date.now(),
+                        updatedAt: Date.now()
+                    };
+                    if (member.createdBy) updatedMember.createdBy = member.createdBy;
+                    if (auth.currentUser?.uid) updatedMember.updatedBy = auth.currentUser.uid;
+
+                    await db.ref(`simple_members/${member.id}`).set(updatedMember);
+                    cancelEditMember();
+                    onToast({ type: 'success', message: '회원 정보가 수정되었습니다.' });
+                } catch (error) {
+                    console.error('회원 수정 실패:', error);
+                    onToast({ type: 'error', message: `회원 수정에 실패했습니다.
+${getFirebaseErrorMessage(error)}` });
+                } finally {
+                    setSavingMemberId('');
+                }
+            };
+
+            const requestDeleteMember = (member) => {
+                if (!isAuthReady) return onToast({ type: 'error', message: 'Firebase 연결이 완료된 후 다시 시도해주세요.' });
+                setPendingDeleteMember(member);
+            };
+
+            const deleteMember = async (member) => {
+                setSavingMemberId(member.id);
+
+                try {
+                    await db.ref(`simple_members/${member.id}`).remove();
+                    if (editingMemberId === member.id) cancelEditMember();
+                    setPendingDeleteMember(null);
+                    onToast({ type: 'success', message: '회원이 삭제되었습니다.' });
+                } catch (error) {
+                    console.error('회원 삭제 실패:', error);
+                    onToast({ type: 'error', message: `회원 삭제에 실패했습니다.
+${getFirebaseErrorMessage(error)}` });
+                } finally {
+                    setSavingMemberId('');
+                }
+            };
+
             return (
-                <div className="space-y-6">
+                <>
+                    <MemberDeleteConfirmModal
+                        member={pendingDeleteMember}
+                        isDeleting={Boolean(pendingDeleteMember && savingMemberId === pendingDeleteMember.id)}
+                        onCancel={() => setPendingDeleteMember(null)}
+                        onDelete={deleteMember}
+                    />
+                    <div className="space-y-6">
                     <div className={APP_CARD_CLASS}>
                         <h2 className="font-extrabold text-gray-800 mb-4 text-lg">➕ 새 회원 등록</h2>
                         <div className="space-y-3">
-                            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름" className={FORM_CONTROL_CLASS} />
+                            <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={PLAYER_NAME_MAX_LENGTH} placeholder="이름" className={FORM_CONTROL_CLASS} />
                             <select value={division} onChange={e => setDivision(e.target.value)} className={FORM_CONTROL_CLASS}>
                                 <option value="" disabled>부수를 선택하세요</option>
                                 {DIVISION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
@@ -684,18 +802,71 @@
 
                     <div>
                         <h2 className="font-extrabold text-gray-800 mb-3 text-lg px-1">📋 회원 목록 ({members.length}명)</h2>
-                        <ul className="space-y-2">
-                            {members.map(m => (
-                                <li key={m.id} className={`${APP_CARD_COMPACT_CLASS} flex justify-between items-center`}>
-                                    <span className="font-bold text-gray-800 text-lg">{m.name}</span>
-                                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-                                        {m.division || '부수 미입력'}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
+                        {members.length > 0 ? (
+                            <ul className="space-y-2">
+                                {members.map(m => {
+                                    const isEditing = editingMemberId === m.id;
+                                    const isSavingMember = savingMemberId === m.id;
+
+                                    return (
+                                        <li key={m.id} className={`${APP_CARD_COMPACT_CLASS} space-y-3`}>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="min-w-0 flex items-center gap-3">
+                                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-700">{getMemberInitials(m)}</span>
+                                                    <div className="min-w-0">
+                                                        <span className="block truncate font-bold text-gray-800 text-lg">{m.name}</span>
+                                                        <span className="mt-1 inline-block text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                                                            {m.division || '부수 미입력'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex shrink-0 gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => isEditing ? cancelEditMember() : startEditMember(m)}
+                                                        disabled={isSavingMember}
+                                                        className={`text-[11px] font-black px-3 py-1 rounded-full btn-press ${isEditing ? 'bg-gray-200 text-gray-700' : 'bg-blue-50 text-blue-700'}`}
+                                                    >
+                                                        {isEditing ? '취소' : '수정'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => requestDeleteMember(m)}
+                                                        disabled={isSavingMember}
+                                                        className={`text-[11px] font-black px-3 py-1 rounded-full ${DANGER_BUTTON_CLASS}`}
+                                                    >
+                                                        삭제
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {isEditing ? (
+                                                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+                                                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} maxLength={PLAYER_NAME_MAX_LENGTH} placeholder="이름" className="w-full bg-white border border-gray-200 p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                                    <select value={editDivision} onChange={e => setEditDivision(e.target.value)} className="w-full bg-white border border-gray-200 p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                                                        <option value="" disabled>부수를 선택하세요</option>
+                                                        {DIVISION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                                    </select>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateMember(m)}
+                                                        disabled={isSavingMember || !isAuthReady}
+                                                        className={`w-full ${PRIMARY_BUTTON_CLASS}`}
+                                                    >
+                                                        {isSavingMember ? '저장 중...' : '수정 저장'}
+                                                    </button>
+                                                </div>
+                                            ) : null}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : (
+                            <div className={EMPTY_STATE_CLASS}>등록된 회원이 없습니다.</div>
+                        )}
                     </div>
-                </div>
+                    </div>
+                </>
             );
         }
 

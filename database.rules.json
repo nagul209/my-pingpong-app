@@ -6,7 +6,7 @@
       ".read": "auth != null",
       ".write": "auth != null",
       "$memberId": {
-        ".validate": "newData.hasChildren(['name', 'division', 'joinedAt']) && newData.childrenCount() >= 3 && newData.childrenCount() <= 4",
+        ".validate": "newData.hasChildren(['name', 'division', 'joinedAt']) && newData.childrenCount() >= 3 && newData.childrenCount() <= 6",
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
         },
@@ -21,6 +21,12 @@
         },
         "$other": {
           ".validate": false
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "updatedBy": {
+          ".validate": "newData.isString() && newData.val().length > 0"
         }
       }
     },
