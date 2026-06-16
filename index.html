@@ -502,18 +502,9 @@
             };
 
             const tabContent = {
-                member: {
-                    title: '회원 관리',
-                    description: '탁구 모임 회원을 등록하고 전체 명단을 확인하세요.'
-                },
-                match: {
-                    title: '경기 기록',
-                    description: '선수를 고르고 세트 스코어를 터치해 경기를 빠르게 저장하세요.'
-                },
-                stats: {
-                    title: '전적 통계',
-                    description: '개인 승률, 상대 전적, 최근 경기 흐름을 확인하세요.'
-                }
+                member: { title: '회원 관리' },
+                match: { title: '경기 기록' },
+                stats: { title: '전적 통계' }
             };
             const currentTabContent = tabContent[activeTab];
             const navItems = [
@@ -525,9 +516,8 @@
             return (
                 <div className="flex flex-col h-screen">
                     <header className="bg-blue-600 text-white px-4 py-5 text-center shadow-sm">
-                        <div className="text-xs font-black uppercase tracking-[0.3em] text-blue-100">🏓 탁구 기록기</div>
+                        <div className="text-2xl font-black uppercase tracking-[0.18em] text-blue-100">🏓 탁구 기록기</div>
                         <h1 className="mt-2 text-2xl font-black">{currentTabContent.title}</h1>
-                        <p className="mt-1 text-sm font-bold leading-5 text-blue-100">{currentTabContent.description}</p>
                     </header>
 
                     <main className="flex-1 overflow-y-auto p-4">
