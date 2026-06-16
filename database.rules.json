@@ -29,7 +29,7 @@
       ".write": "auth != null",
       ".indexOn": ["timestamp", "playerA_id", "playerB_id"],
       "$matchId": {
-        ".validate": "newData.hasChildren(['date', 'playerA_id', 'playerA_name', 'playerB_id', 'playerB_name', 'scoreA', 'scoreB', 'timestamp']) && newData.childrenCount() >= 8 && newData.childrenCount() <= 12 && newData.child('playerA_id').val() != newData.child('playerB_id').val() && ((newData.child('scoreA').val() == 3 && (newData.child('scoreB').val() == 0 || newData.child('scoreB').val() == 1 || newData.child('scoreB').val() == 2)) || (newData.child('scoreB').val() == 3 && (newData.child('scoreA').val() == 0 || newData.child('scoreA').val() == 1 || newData.child('scoreA').val() == 2)))",
+        ".validate": "newData.hasChildren(['date', 'playerA_id', 'playerA_name', 'playerB_id', 'playerB_name', 'scoreA', 'scoreB', 'timestamp']) && newData.childrenCount() >= 8 && newData.childrenCount() <= 13 && newData.child('playerA_id').val() != newData.child('playerB_id').val() && ((newData.child('scoreA').val() == 3 && (newData.child('scoreB').val() == 0 || newData.child('scoreB').val() == 1 || newData.child('scoreB').val() == 2)) || (newData.child('scoreB').val() == 3 && (newData.child('scoreA').val() == 0 || newData.child('scoreA').val() == 1 || newData.child('scoreA').val() == 2)))",
         "date": {
           ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
         },
@@ -65,6 +65,9 @@
         },
         "statsVersion": {
           ".validate": "newData.isNumber() && newData.val() == 1"
+        },
+        "donginDivisionDelta": {
+          ".validate": "newData.isNumber() && (newData.val() == -1 || newData.val() == 0 || newData.val() == 1)"
         },
         "$other": {
           ".validate": false
