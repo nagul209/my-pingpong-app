@@ -76,6 +76,94 @@
         ];
         const MATCH_PAGE_SIZE = 50;
 
+        const SPECIAL_DIVISION_RULE = {
+            targetPlayerName: '민동인',
+            opponentName: '박선행',
+            minDivision: 1,
+            maxDivision: 7
+        };
+
+        function parseDivisionNumber(division) {
+            const match = String(division || '').match(/^(\d+)부$/);
+            return match ? Number(match[1]) : null;
+        }
+
+        function formatDivision(number) {
+            return `${number}부`;
+        }
+
+        function getDonginDivisionDelta(match) {
+            if (!match || Number(match.scoreA) + Number(match.scoreB) !== 3) return 0;
+
+            const isTargetA = match.playerA_name === SPECIAL_DIVISION_RULE.targetPlayerName;
+            const isTargetB = match.playerB_name === SPECIAL_DIVISION_RULE.targetPlayerName;
+            const isOpponentA = match.playerA_name === SPECIAL_DIVISION_RULE.opponentName;
+            const isOpponentB = match.playerB_name === SPECIAL_DIVISION_RULE.opponentName;
+            if (!((isTargetA && isOpponentB) || (isTargetB && isOpponentA))) return 0;
+
+            const targetWon = isTargetA ? Number(match.scoreA) === 3 : Number(match.scoreB) === 3;
+            return targetWon ? -1 : 1;
+        }
+
+        function getDonginMemberId(match) {
+            if (match?.playerA_name === SPECIAL_DIVISION_RULE.targetPlayerName) return match.playerA_id;
+            if (match?.playerB_name === SPECIAL_DIVISION_RULE.targetPlayerName) return match.playerB_id;
+            return '';
+        }
+
+        function applyDivisionDelta(division, delta) {
+            const currentDivisionNumber = parseDivisionNumber(division);
+            if (!currentDivisionNumber || !delta) return { division, appliedDelta: 0 };
+
+            const nextDivisionNumber = Math.min(
+                SPECIAL_DIVISION_RULE.maxDivision,
+                Math.max(SPECIAL_DIVISION_RULE.minDivision, currentDivisionNumber + delta)
+            );
+
+            return {
+                division: formatDivision(nextDivisionNumber),
+                appliedDelta: nextDivisionNumber - currentDivisionNumber
+            };
+        }
+
+        function addSpecialDivisionUpdates(updates, members, previousMatch, nextMatch) {
+            const previousDonginId = getDonginMemberId(previousMatch);
+            const nextDonginId = getDonginMemberId(nextMatch);
+            const donginId = nextDonginId || previousDonginId;
+            if (!donginId) {
+                if (nextMatch) nextMatch.donginDivisionDelta = 0;
+                return '';
+            }
+
+            const donginMember = members.find(member => member.id === donginId);
+            if (!donginMember?.division) {
+                if (nextMatch) nextMatch.donginDivisionDelta = 0;
+                return '';
+            }
+
+            let workingDivision = donginMember.division;
+            const previousAppliedDelta = Number(previousMatch?.donginDivisionDelta) || 0;
+            if (previousAppliedDelta) {
+                workingDivision = applyDivisionDelta(workingDivision, -previousAppliedDelta).division;
+            }
+
+            let nextAppliedDelta = 0;
+            if (nextMatch) {
+                const result = applyDivisionDelta(workingDivision, getDonginDivisionDelta(nextMatch));
+                workingDivision = result.division;
+                nextAppliedDelta = result.appliedDelta;
+                nextMatch.donginDivisionDelta = nextAppliedDelta;
+            }
+
+            if (workingDivision !== donginMember.division) {
+                updates[`simple_members/${donginId}/division`] = workingDivision;
+            }
+
+            if (nextAppliedDelta < 0) return `${SPECIAL_DIVISION_RULE.targetPlayerName} 부수가 ${workingDivision}(으)로 올라갔습니다.`;
+            if (nextAppliedDelta > 0) return `${SPECIAL_DIVISION_RULE.targetPlayerName} 부수가 ${workingDivision}(으)로 내려갔습니다.`;
+            return '';
+        }
+
         // 공통 Tailwind 클래스와 색상 역할 정의
         // primary=blue, opponent=red, success=emerald, neutral=gray
         const APP_CARD_CLASS = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-100';
@@ -142,21 +230,26 @@
             addIncrement(updates, `h2h_stats/${pairKey}/${winnerId === player1Id ? 'player1_wins' : 'player2_wins'}`, direction);
         }
 
-        function buildSaveMatchUpdates(matchId, match) {
-            const updates = { [`simple_matches/${matchId}`]: match };
+        function buildSaveMatchUpdates(matchId, match, members) {
+            const updates = {};
+            const divisionMessage = addSpecialDivisionUpdates(updates, members, null, match);
+            updates[`simple_matches/${matchId}`] = match;
             addMatchStatsUpdates(updates, match, 1);
-            return updates;
+            return { updates, divisionMessage };
         }
 
-        function buildReplaceMatchUpdates(matchId, previousMatch, nextMatch) {
-            const updates = { [`simple_matches/${matchId}`]: nextMatch };
+        function buildReplaceMatchUpdates(matchId, previousMatch, nextMatch, members) {
+            const updates = {};
+            const divisionMessage = addSpecialDivisionUpdates(updates, members, previousMatch, nextMatch);
+            updates[`simple_matches/${matchId}`] = nextMatch;
             if (previousMatch.statsVersion) addMatchStatsUpdates(updates, previousMatch, -1);
             addMatchStatsUpdates(updates, nextMatch, 1);
-            return updates;
+            return { updates, divisionMessage };
         }
 
-        function buildDeleteMatchUpdates(matchId, match) {
+        function buildDeleteMatchUpdates(matchId, match, members) {
             const updates = { [`simple_matches/${matchId}`]: null };
+            addSpecialDivisionUpdates(updates, members, match, null);
             if (match.statsVersion) addMatchStatsUpdates(updates, match, -1);
             return updates;
         }
@@ -952,10 +1045,13 @@ ${getFirebaseErrorMessage(error)}` });
                     if (auth.currentUser?.uid) newMatch.createdBy = auth.currentUser.uid;
 
                     const matchRef = db.ref('simple_matches').push();
-                    await db.ref().update(buildSaveMatchUpdates(matchRef.key, newMatch));
+                    const { updates, divisionMessage } = buildSaveMatchUpdates(matchRef.key, newMatch, members);
+                    await db.ref().update(updates);
 
                     recentSavedMatchRef.current = { key: matchKey, savedAt: Date.now() };
-                    onToast({ type: 'success', message: `${nameA} ${scoreA} : ${scoreB} ${nameB}\n기록이 저장되었습니다!` });
+                    onToast({ type: 'success', message: `${nameA} ${scoreA} : ${scoreB} ${nameB}
+기록이 저장되었습니다!${divisionMessage ? `
+${divisionMessage}` : ''}` });
                 } catch (error) {
                     console.error('경기 저장 실패:', error);
                     onToast({ type: 'error', message: `경기 저장에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
@@ -1102,10 +1198,12 @@ ${getFirebaseErrorMessage(error)}` });
                     if (match.createdBy) updatedMatch.createdBy = match.createdBy;
                     if (auth.currentUser?.uid) updatedMatch.updatedBy = auth.currentUser.uid;
 
-                    await db.ref().update(buildReplaceMatchUpdates(match.id, match, updatedMatch));
+                    const { updates, divisionMessage } = buildReplaceMatchUpdates(match.id, match, updatedMatch, members);
+                    await db.ref().update(updates);
                     onMatchUpdated(match.id, updatedMatch);
                     cancelEditMatch();
-                    onToast({ type: 'success', message: '경기 기록이 수정되었습니다.' });
+                    onToast({ type: 'success', message: `경기 기록이 수정되었습니다.${divisionMessage ? `
+${divisionMessage}` : ''}` });
                 } catch (error) {
                     console.error('경기 수정 실패:', error);
                     onToast({ type: 'error', message: `경기 수정에 실패했습니다.\n${getFirebaseErrorMessage(error)}` });
@@ -1125,7 +1223,7 @@ ${getFirebaseErrorMessage(error)}` });
                 setSavingMatchId(match.id);
 
                 try {
-                    await db.ref().update(buildDeleteMatchUpdates(match.id, match));
+                    await db.ref().update(buildDeleteMatchUpdates(match.id, match, members));
                     onMatchDeleted(match.id);
                     if (editingMatchId === match.id) cancelEditMatch();
                     setPendingDeleteMatch(null);
