@@ -502,9 +502,18 @@
             };
 
             const tabContent = {
-                member: { title: '회원 관리' },
-                match: { title: '경기 기록' },
-                stats: { title: '전적 통계' }
+                member: {
+                    title: '회원 관리',
+                    description: '탁구 모임 회원을 등록하고 전체 명단을 확인하세요.'
+                },
+                match: {
+                    title: '경기 기록',
+                    description: '선수를 고르고 세트 스코어를 터치해 경기를 빠르게 저장하세요.'
+                },
+                stats: {
+                    title: '전적 통계',
+                    description: '개인 승률, 상대 전적, 최근 경기 흐름을 확인하세요.'
+                }
             };
             const currentTabContent = tabContent[activeTab];
             const navItems = [
@@ -516,8 +525,9 @@
             return (
                 <div className="flex flex-col h-screen">
                     <header className="bg-blue-600 text-white px-4 py-5 text-center shadow-sm">
-                        <div className="text-2xl font-black uppercase tracking-[0.18em] text-blue-100">🏓 탁구 기록기</div>
+                        <div className="text-xs font-black uppercase tracking-[0.3em] text-blue-100">🏓 탁구 기록기</div>
                         <h1 className="mt-2 text-2xl font-black">{currentTabContent.title}</h1>
+                        <p className="mt-1 text-sm font-bold leading-5 text-blue-100">{currentTabContent.description}</p>
                     </header>
 
                     <main className="flex-1 overflow-y-auto p-4">
@@ -687,7 +697,7 @@
             );
         }
 
-        function PlayerCardSelector({ members, selectedA, selectedB, activeSlot, onActiveSlotChange, onSelect, labels = { a: '선수 A', b: '선수 B' }, showSlotLabels = true }) {
+        function PlayerCardSelector({ members, selectedA, selectedB, activeSlot, onActiveSlotChange, onSelect, labels = { a: '선수 A', b: '선수 B' } }) {
             const getName = (id, fallback) => members.find(m => m.id === id)?.name || fallback;
 
             return (
@@ -698,7 +708,7 @@
                             onClick={() => onActiveSlotChange('A')}
                             className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'A' ? PLAYER_A_CARD_ACTIVE_CLASS : PLAYER_A_CARD_CLASS}`}
                         >
-                            {showSlotLabels && <div className="text-[10px] font-black opacity-70 mb-1">{labels.a}</div>}
+                            <div className="text-[10px] font-black opacity-70 mb-1">{labels.a}</div>
                             <div className="font-black text-lg truncate">{getName(selectedA, '선택')}</div>
                         </button>
                         <span className="font-black text-gray-300 italic text-xl">VS</span>
@@ -707,16 +717,14 @@
                             onClick={() => onActiveSlotChange('B')}
                             className={`min-w-0 p-3 rounded-xl text-center border-2 btn-press ${activeSlot === 'B' ? PLAYER_B_CARD_ACTIVE_CLASS : PLAYER_B_CARD_CLASS}`}
                         >
-                            {showSlotLabels && <div className="text-[10px] font-black opacity-70 mb-1">{labels.b}</div>}
+                            <div className="text-[10px] font-black opacity-70 mb-1">{labels.b}</div>
                             <div className="font-black text-lg truncate">{getName(selectedB, '선택')}</div>
                         </button>
                     </div>
 
                     <div>
                         <p className="text-xs font-bold text-gray-400 mb-2 text-center">
-                            {showSlotLabels
-                                ? (activeSlot === 'A' ? `${labels.a}를 선택하세요. 선택 후 바로 ${labels.b}를 고를 수 있습니다.` : `${labels.b}를 선택하세요.`)
-                                : (activeSlot === 'A' ? '첫 번째 선수를 선택하세요. 선택 후 바로 두 번째 선수를 고를 수 있습니다.' : '두 번째 선수를 선택하세요.')}
+                            {activeSlot === 'A' ? `${labels.a}를 선택하세요. 선택 후 바로 ${labels.b}를 고를 수 있습니다.` : `${labels.b}를 선택하세요.`}
                         </p>
                         {members.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2">
@@ -979,6 +987,7 @@ ${getFirebaseErrorMessage(error)}` });
                 return {
                     ...option,
                     color: isPlayerAWinner ? 'blue' : 'red',
+                    winnerSlot: isPlayerAWinner ? 'A' : 'B',
                     winnerName: isPlayerAWinner
                         ? getSelectedPlayerName(playerA, '선수 A')
                         : getSelectedPlayerName(playerB, '선수 B')
@@ -987,19 +996,9 @@ ${getFirebaseErrorMessage(error)}` });
 
             const selectMatchPlayer = (memberId) => {
                 if (activePlayerSlot === 'A') {
-                    if (memberId === playerA) {
-                        setPlayerA('');
-                        return;
-                    }
-
                     setPlayerA(memberId);
                     if (memberId === playerB) setPlayerB('');
                     setActivePlayerSlot('B');
-                    return;
-                }
-
-                if (memberId === playerB) {
-                    setPlayerB('');
                     return;
                 }
 
@@ -1079,14 +1078,13 @@ ${divisionMessage}` : ''}` });
                         activeSlot={activePlayerSlot}
                         onActiveSlotChange={setActivePlayerSlot}
                         onSelect={selectMatchPlayer}
-                        showSlotLabels={false}
                     />
 
                     {/* 원터치 스코어 보드 */}
                     <div className="mt-4">
                         <p className="text-center text-xs font-bold text-gray-400 mb-3">👇 경기 결과를 터치하면 즉시 저장됩니다</p>
                         <div className="grid grid-cols-2 gap-3">
-                            {scoreButtons.map(({ scoreA, scoreB, color, winnerName }) => {
+                            {scoreButtons.map(({ scoreA, scoreB, color, winnerSlot, winnerName }) => {
                                 const colorClass = color === 'blue'
                                     ? 'bg-blue-600 border-blue-600 text-white shadow-md hover:bg-blue-700'
                                     : 'bg-red-600 border-red-600 text-white shadow-md hover:bg-red-700';
@@ -1101,10 +1099,12 @@ ${divisionMessage}` : ''}` });
                                         disabled={isSavingMatch || !isAuthReady}
                                         className={`bg-white border-2 ${colorClass} ${disabledColorClass} flex min-h-[8.75rem] flex-col items-center justify-center gap-2 px-3 py-5 text-center font-black rounded-2xl shadow-sm btn-press ${SCORE_BUTTON_DISABLED_CLASS}`}
                                     >
-                                        <span className="min-h-[1.5rem] max-w-full truncate text-lg font-black leading-snug">
+                                        <span className="text-[11px] font-black uppercase tracking-[0.18em] opacity-75">선수 {winnerSlot} 승리</span>
+                                        <span className="text-4xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
+                                        <span className="min-h-[1.25rem] max-w-full truncate text-sm font-black leading-snug">
                                             {isScoreSelectionReady ? `${winnerName} 승리` : '선수를 먼저 선택하세요'}
                                         </span>
-                                        <span className="text-4xl font-black leading-none tracking-tight">{scoreA}:{scoreB}</span>
+                                        <span className="text-xs font-black opacity-80">· {scoreA}:{scoreB}</span>
                                     </button>
                                 );
                             })}
